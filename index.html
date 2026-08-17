@@ -117,25 +117,27 @@
   /* ===== NAV CARDS ===== */
   .nav-cards{
     display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:20px;
+    grid-template-columns:1fr;
+    gap:11px;
     margin-bottom:24px;
   }
   .nav-card{
     background:linear-gradient(135deg, #ffffff 0%, #f5f8fc 100%);
     border:1px solid #e3e9f2;
     border-radius:14px;
-    padding:28px;
+    padding:20px;
+    min-height:39px;
     display:flex;
     align-items:center;
     justify-content:center;
-    gap:12px;
+    gap:8px;
     cursor:pointer;
-    font-size:18px;
+    font-size:13px;
     font-weight:bold;
     color:var(--text);
     box-shadow:0 2px 8px rgba(31,78,120,0.06);
     transition:box-shadow 0.2s ease, transform 0.2s ease;
+    -webkit-tap-highlight-color:transparent;
   }
   .nav-card:hover{
     box-shadow:0 6px 18px rgba(31,78,120,0.14);
@@ -162,7 +164,7 @@
     font-weight:bold;
     cursor:pointer;
     margin-bottom:14px;
-    padding:0;
+    padding:8px 0;
     font-family:inherit;
   }
   .back-btn:hover{text-decoration:underline;}
@@ -207,9 +209,15 @@
     font-family:inherit;
   }
   .btn:hover{background:var(--navy-dark);}
+  .table-scroll{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    border-radius:8px;
+  }
   table{
     border-collapse:collapse;
     width:100%;
+    min-width:640px;
     table-layout:fixed;
   }
   th, td{
@@ -222,13 +230,21 @@
     text-align:center;
     color:var(--navy-dark);
     font-weight:bold;
-    width:210px;
+    width:150px;
+    position:sticky;
+    left:0;
+    z-index:2;
+    background:var(--header-bg);
   }
   td.points-col{
     text-align:left;
     color:var(--navy-dark);
     font-weight:bold;
-    width:210px;
+    width:150px;
+    position:sticky;
+    left:0;
+    z-index:1;
+    background:#fbfcfe;
   }
   thead th{
     background:var(--header-bg);
@@ -262,13 +278,68 @@
     color:var(--navy-dark);
   }
 
+  /* ===== TABLET (~800px and below) ===== */
   @media (max-width:800px){
-    body{padding:12px;}
-    .dash-header{padding:16px;}
-    .brand-name{font-size:18px;}
+    body{padding:14px;}
+    .dash-header{
+      padding:16px;
+      flex-direction:column;
+      align-items:stretch;
+    }
+    .brand{
+      justify-content:center;
+    }
+    .header-right{
+      justify-content:space-between;
+    }
+    .brand-name{font-size:19px;}
     .nav-cards{grid-template-columns:1fr;}
-    th,td{font-size:11px;padding:5px 4px;}
-    td.points-col, th.points-col{width:120px;}
+    .nav-card{padding:16px;}
+    th,td{font-size:12px;padding:7px 6px;}
+    td.points-col, th.points-col{width:130px;}
+  }
+
+  /* ===== PHONE (~480px and below) ===== */
+  @media (max-width:480px){
+    body{padding:10px;}
+    .wrap{max-width:100%;}
+    .dash-header{
+      padding:14px;
+      border-radius:12px;
+      gap:12px;
+    }
+    .brand{
+      padding:8px 12px;
+      gap:10px;
+    }
+    .brand-logo{width:38px;height:38px;}
+    .brand-name{font-size:16px;letter-spacing:0.3px;}
+    .brand-tagline{font-size:10px;}
+    .header-right{
+      flex-direction:row-reverse;
+      justify-content:space-between;
+      align-items:center;
+    }
+    .refresh-btn{
+      flex:1;
+      justify-content:center;
+      padding:10px 12px;
+      font-size:13px;
+    }
+    .sync-status{font-size:11px;}
+    .nav-card{
+      padding:13px;
+      font-size:12px;
+      border-radius:12px;
+    }
+    .report-card{padding:12px;border-radius:12px;}
+    .report-toolbar h2{font-size:16px;}
+    .back-btn{font-size:13px;margin-bottom:10px;}
+    table{min-width:600px;}
+    th,td{font-size:11px;padding:6px 5px;}
+    td.points-col, th.points-col{width:110px;}
+    /* Prevent iOS auto-zoom on input focus */
+    td input{font-size:16px;padding:2px 0;}
   }
 </style>
 </head>
@@ -333,25 +404,27 @@
         <h2>Daily Report</h2>
       </div>
 
-      <table id="reportTable">
-        <thead>
-          <tr class="title-row">
-            <th class="points-col" rowspan="2">Points</th>
-            <th colspan="6">REPORT OF LAST DAY</th>
-            <th class="total-col" rowspan="2">TOTAL</th>
-          </tr>
-          <tr>
-            <th>MANJU</th>
-            <th>SONAM</th>
-            <th>MADHUSMITA</th>
-            <th>BEENA</th>
-            <th>BANGALORE DR</th>
-            <th>MBBS DOER</th>
-          </tr>
-        </thead>
-        <tbody id="reportBody">
-        </tbody>
-      </table>
+      <div class="table-scroll">
+        <table id="reportTable">
+          <thead>
+            <tr class="title-row">
+              <th class="points-col" rowspan="2">Points</th>
+              <th colspan="6">REPORT OF LAST DAY</th>
+              <th class="total-col" rowspan="2">TOTAL</th>
+            </tr>
+            <tr>
+              <th>MANJU</th>
+              <th>SONAM</th>
+              <th>MADHUSMITA</th>
+              <th>BEENA</th>
+              <th>BANGALORE DR</th>
+              <th>MBBS DOER</th>
+            </tr>
+          </thead>
+          <tbody id="reportBody">
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
