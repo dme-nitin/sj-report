@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Global Edge Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
 <style>
   :root{
     --navy:#1f4e78;
@@ -342,6 +348,215 @@
     /* Prevent iOS auto-zoom on input focus */
     td input{font-size:16px;padding:2px 0;}
   }
+  /* ===== MJ SECTION: STUDENT ENQUIRY DASHBOARD (scoped) ===== */
+  #mjDashboardRoot{
+    --eq-navy:#16324a;
+    --eq-blue:#2563eb;
+    --eq-blue-light:#eaf0fe;
+    --eq-teal:#0d9488;
+    --eq-teal-light:#e6f7f5;
+    --eq-amber:#d97706;
+    --eq-amber-light:#fdf1e0;
+    --eq-green:#16a34a;
+    --eq-green-light:#e9f9ee;
+    --eq-red:#dc2626;
+    --eq-red-light:#fdeaea;
+    --eq-gray:#64748b;
+    --eq-border:#e3e8ef;
+    --eq-card:#ffffff;
+    --eq-text:#1a2433;
+    --eq-text-soft:#64748b;
+    font-family:'Inter', Arial, Helvetica, sans-serif;
+    color:var(--eq-text);
+  }
+  #mjDashboardRoot .eq-toolbar{
+    display:flex; justify-content:space-between; align-items:center;
+    flex-wrap:wrap; gap:10px; margin-bottom:16px;
+  }
+  #mjDashboardRoot .eq-toolbar h2{margin:0; font-size:18px; color:var(--eq-navy);}
+  #mjDashboardRoot .eq-toolbar-actions{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  #mjDashboardRoot .eq-data-status{font-size:11.5px; color:var(--eq-text-soft); white-space:nowrap;}
+  #mjDashboardRoot .eq-search-box{
+    display:flex; align-items:center; background:#f1f4f9;
+    border:1px solid var(--eq-border); border-radius:8px; padding:7px 12px; gap:6px;
+  }
+  #mjDashboardRoot .eq-search-box input{
+    background:transparent; border:none; outline:none; font-size:13px; width:150px; font-family:inherit; color:var(--eq-text);
+  }
+  #mjDashboardRoot .eq-primary-btn, #mjDashboardRoot .eq-ghost-btn{
+    border:none; border-radius:8px; padding:8px 13px; font-size:13px; font-weight:600;
+    font-family:inherit; cursor:pointer; display:flex; align-items:center; gap:6px; white-space:nowrap;
+  }
+  #mjDashboardRoot .eq-primary-btn{background:var(--eq-blue); color:#fff;}
+  #mjDashboardRoot .eq-primary-btn:hover{background:#1d4ed8;}
+  #mjDashboardRoot .eq-ghost-btn{background:#f1f4f9; color:var(--eq-navy); border:1px solid var(--eq-border);}
+  #mjDashboardRoot .eq-ghost-btn:hover{background:#e6ebf3;}
+  #mjDashboardRoot .eq-refresh-icon{display:inline-block; transition:transform .4s;}
+  #mjDashboardRoot .eq-spinning .eq-refresh-icon{animation:eq-spin .7s linear infinite;}
+  @keyframes eq-spin{ to{transform:rotate(360deg);} }
+  #mjDashboardRoot .eq-auto-refresh-toggle{display:flex; align-items:center; gap:6px; color:var(--eq-text-soft); font-size:12px;}
+  #mjDashboardRoot .eq-switch{position:relative; width:34px; height:18px;}
+  #mjDashboardRoot .eq-switch input{opacity:0; width:0; height:0;}
+  #mjDashboardRoot .eq-slider{position:absolute; cursor:pointer; inset:0; background:#cdd6e0; border-radius:20px; transition:.2s;}
+  #mjDashboardRoot .eq-slider:before{content:""; position:absolute; height:14px; width:14px; left:2px; top:2px; background:#fff; border-radius:50%; transition:.2s;}
+  #mjDashboardRoot .eq-switch input:checked + .eq-slider{background:var(--eq-green);}
+  #mjDashboardRoot .eq-switch input:checked + .eq-slider:before{transform:translateX(16px);}
+
+  #mjDashboardRoot .eq-filter-bar{
+    background:#f8fafc; border:1px solid var(--eq-border); border-radius:12px; padding:12px 16px;
+    margin-bottom:16px; display:flex; flex-wrap:wrap; align-items:center; gap:10px;
+  }
+  #mjDashboardRoot .eq-period-btns{display:flex; gap:8px; flex-wrap:wrap;}
+  #mjDashboardRoot .eq-period-btn{
+    border:1px solid var(--eq-border); background:#fff; color:var(--eq-text-soft);
+    padding:7px 13px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit;
+  }
+  #mjDashboardRoot .eq-period-btn.active{background:var(--eq-blue); color:#fff; border-color:var(--eq-blue);}
+  #mjDashboardRoot .eq-custom-range{display:none; align-items:center; gap:6px;}
+  #mjDashboardRoot .eq-custom-range.show{display:flex;}
+  #mjDashboardRoot .eq-custom-range input[type=date]{
+    border:1px solid var(--eq-border); border-radius:7px; padding:6px 8px; font-size:12.5px; font-family:inherit; color:var(--eq-text);
+  }
+  #mjDashboardRoot .eq-quick-filters{display:flex; gap:8px; flex-wrap:wrap; margin-left:auto;}
+  #mjDashboardRoot .eq-quick-filters select{
+    border:1px solid var(--eq-border); border-radius:7px; padding:6px 10px; font-size:12.5px; font-family:inherit; color:var(--eq-text); background:#fff;
+  }
+  #mjDashboardRoot .eq-clear-filters{background:none; border:none; color:var(--eq-red); font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit;}
+
+  #mjDashboardRoot .eq-kpi-grid{display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; margin-bottom:16px;}
+  #mjDashboardRoot .eq-kpi-card{
+    background:var(--eq-card); border:1px solid var(--eq-border); border-radius:12px; padding:14px 16px; border-left:4px solid var(--eq-blue);
+    transition:box-shadow 0.15s ease, transform 0.15s ease;
+  }
+  #mjDashboardRoot .eq-kpi-card.eq-clickable{
+    cursor:pointer;
+  }
+  #mjDashboardRoot .eq-kpi-card.eq-clickable:hover{
+    box-shadow:0 4px 14px rgba(22,50,74,0.14);
+    transform:translateY(-2px);
+  }
+  #mjDashboardRoot .eq-kpi-card.eq-clickable:focus-visible{
+    outline:2px solid var(--eq-blue); outline-offset:2px;
+  }
+  #mjDashboardRoot .eq-kpi-card.mbbs{border-left-color:var(--eq-amber);}
+  #mjDashboardRoot .eq-kpi-card.nonmbbs{border-left-color:var(--eq-teal);}
+  #mjDashboardRoot .eq-kpi-card.docrecv{border-left-color:var(--eq-green);}
+  #mjDashboardRoot .eq-kpi-card.docpend{border-left-color:var(--eq-red);}
+  #mjDashboardRoot .eq-kpi-card.convmbbs{border-left-color:var(--eq-amber);}
+  #mjDashboardRoot .eq-kpi-card.convnonmbbs{border-left-color:var(--eq-teal);}
+  #mjDashboardRoot .eq-kpi-label{font-size:11.5px; color:var(--eq-text-soft); font-weight:600; text-transform:uppercase; letter-spacing:0.3px;}
+  #mjDashboardRoot .eq-kpi-value{font-size:24px; font-weight:800; margin:5px 0 4px; color:var(--eq-navy);}
+  #mjDashboardRoot .eq-kpi-compare{font-size:11.5px; color:var(--eq-text-soft); display:flex; align-items:center; gap:5px;}
+  #mjDashboardRoot .eq-trend-up{color:var(--eq-green); font-weight:700;}
+  #mjDashboardRoot .eq-trend-down{color:var(--eq-red); font-weight:700;}
+
+  #mjDashboardRoot .eq-section-card{
+    background:var(--eq-card); border:1px solid var(--eq-border); border-radius:12px; padding:16px 18px; margin-bottom:16px;
+  }
+  #mjDashboardRoot .eq-section-card h3{margin:0 0 12px; font-size:15px; font-weight:700; color:var(--eq-navy);}
+  #mjDashboardRoot .eq-section-card h3 .eq-sub{font-size:11.5px; font-weight:500; color:var(--eq-text-soft); margin-left:6px;}
+
+
+  #mjDashboardRoot .eq-middle-row{display:grid; grid-template-columns:1.6fr 1fr; gap:16px; margin-bottom:16px;}
+  #mjDashboardRoot .eq-chart-wrap{position:relative; height:260px;}
+  #mjDashboardRoot .eq-chart-hint{font-size:11px; color:var(--eq-text-soft); margin-top:8px;}
+
+  #mjDashboardRoot .eq-bottom-row{display:flex; justify-content:center; margin:0;}
+  #mjDashboardRoot .eq-bottom-row .eq-section-card{width:100%; max-width:1100px; margin:0 auto;}
+  #mjDashboardRoot .eq-docs-grid{
+    display:grid; grid-template-columns:repeat(4, 1fr); gap:12px;
+  }
+  #mjDashboardRoot .eq-docs-stat{
+    background:#f8fafc; border-radius:10px; padding:14px 12px; text-align:center;
+  }
+  #mjDashboardRoot .eq-docs-label{font-size:11.5px; color:var(--eq-text-soft); font-weight:600; margin-bottom:6px;}
+  #mjDashboardRoot .eq-docs-value{font-size:22px; font-weight:800; color:var(--eq-green);}
+
+  #mjDashboardRoot .eq-table-scroll{overflow-x:auto; -webkit-overflow-scrolling:touch;}
+  #mjDashboardRoot .eq-table{width:100%; border-collapse:collapse; min-width:720px;}
+  #mjDashboardRoot .eq-table th{
+    text-align:left; padding:9px 10px; font-size:11px; text-transform:uppercase; letter-spacing:0.3px;
+    color:var(--eq-text-soft); font-weight:700; border-bottom:2px solid var(--eq-border); cursor:pointer; user-select:none;
+  }
+  #mjDashboardRoot .eq-table td{padding:9px 10px; font-size:13px; border-bottom:1px solid var(--eq-border); color:var(--eq-text);}
+  #mjDashboardRoot .eq-table tbody tr:hover{background:#f8fafc;}
+  #mjDashboardRoot .eq-badge{display:inline-block; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700;}
+  #mjDashboardRoot .eq-badge.new{background:var(--eq-blue-light); color:var(--eq-blue);}
+  #mjDashboardRoot .eq-badge.followup{background:var(--eq-amber-light); color:var(--eq-amber);}
+  #mjDashboardRoot .eq-badge.docrecv{background:var(--eq-teal-light); color:var(--eq-teal);}
+  #mjDashboardRoot .eq-badge.docpend{background:var(--eq-red-light); color:var(--eq-red);}
+  #mjDashboardRoot .eq-badge.converted{background:var(--eq-green-light); color:var(--eq-green);}
+  #mjDashboardRoot .eq-badge.closed{background:#eef0f3; color:var(--eq-gray);}
+  #mjDashboardRoot .eq-docs-icon.yes{color:var(--eq-green); font-weight:700;}
+  #mjDashboardRoot .eq-docs-icon.no{color:var(--eq-red); font-weight:700;}
+  #mjDashboardRoot .eq-table-footer{display:flex; justify-content:space-between; align-items:center; margin-top:10px; font-size:12px; color:var(--eq-text-soft); flex-wrap:wrap; gap:8px;}
+  #mjDashboardRoot .eq-pager{display:flex; gap:6px;}
+  #mjDashboardRoot .eq-pager button{border:1px solid var(--eq-border); background:#fff; border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; font-family:inherit;}
+  #mjDashboardRoot .eq-pager button:disabled{opacity:0.4; cursor:not-allowed;}
+
+  #mjDashboardRoot .eq-detail-view{display:none;}
+  #mjDashboardRoot .eq-detail-back{
+    background:none; border:none; color:var(--eq-blue); font-size:13.5px; font-weight:700;
+    cursor:pointer; padding:8px 0; margin-bottom:10px; font-family:inherit;
+  }
+  #mjDashboardRoot .eq-detail-back:hover{text-decoration:underline;}
+
+  #mjDashboardRoot .eq-sw-header-row{
+    display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;
+  }
+  #mjDashboardRoot .eq-sw-header-row h3{margin:0;}
+  #mjDashboardRoot .eq-sw-total-badge{
+    background:var(--eq-blue); color:#fff; padding:8px 18px; border-radius:8px;
+    font-weight:800; font-size:13px; letter-spacing:0.4px; text-transform:uppercase;
+    display:flex; align-items:center; gap:8px;
+  }
+  #mjDashboardRoot .eq-sw-total-badge #eqSwTotal{font-size:18px;}
+
+  #mjDashboardRoot .eq-sw-daterange{
+    display:flex; align-items:center; flex-wrap:wrap; gap:14px;
+    padding:12px 14px; background:#f8fafc; border-radius:10px; margin-bottom:18px;
+  }
+  #mjDashboardRoot .eq-sw-daterange label{
+    display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--eq-text-soft); font-weight:600;
+  }
+  #mjDashboardRoot .eq-sw-daterange input[type=text]{
+    border:1px solid var(--eq-border); border-radius:7px; padding:6px 8px; font-size:12.5px;
+    font-family:inherit; color:var(--eq-text); width:112px; cursor:pointer; background:#fff;
+  }
+  #mjDashboardRoot .eq-sw-block{margin-bottom:22px;}
+  #mjDashboardRoot .eq-sw-block h4{
+    margin:0 0 10px; font-size:13.5px; font-weight:800; color:var(--eq-navy);
+    text-transform:uppercase; letter-spacing:0.4px; border-bottom:2px solid var(--eq-border); padding-bottom:6px;
+  }
+  #mjDashboardRoot .eq-sw-subblock{margin-top:14px;}
+  #mjDashboardRoot .eq-sw-subblock:first-of-type{margin-top:0;}
+  #mjDashboardRoot .eq-sw-subblock h5{
+    margin:0 0 8px; font-size:12px; font-weight:700; color:var(--eq-text-soft);
+    text-transform:uppercase; letter-spacing:0.3px;
+  }
+  #mjDashboardRoot .eq-sw-list{border:1px solid var(--eq-border); border-radius:10px; overflow:hidden;}
+  #mjDashboardRoot .eq-sw-list-item{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:9px 14px; font-size:13px; border-bottom:1px solid var(--eq-border);
+  }
+  #mjDashboardRoot .eq-sw-list-item:last-child{border-bottom:none;}
+  #mjDashboardRoot .eq-sw-list-item:nth-child(even){background:#f8fafc;}
+  #mjDashboardRoot .eq-sw-list-item .name{color:var(--eq-text);}
+  #mjDashboardRoot .eq-sw-list-item .count{font-weight:800; color:var(--eq-navy);}
+  #mjDashboardRoot .eq-sw-empty{padding:14px; text-align:center; color:var(--eq-text-soft); font-size:12.5px;}
+
+  @media (max-width:1100px){
+    #mjDashboardRoot .eq-kpi-grid{grid-template-columns:repeat(2, 1fr);}
+    #mjDashboardRoot .eq-middle-row{grid-template-columns:1fr;}
+    #mjDashboardRoot .eq-docs-grid{grid-template-columns:repeat(2, 1fr);}
+  }
+  @media (max-width:600px){
+    #mjDashboardRoot .eq-kpi-grid{grid-template-columns:1fr;}
+    #mjDashboardRoot .eq-docs-grid{grid-template-columns:1fr 1fr;}
+    #mjDashboardRoot .eq-search-box input{width:100px;}
+    #mjDashboardRoot .eq-quick-filters{margin-left:0; width:100%;}
+    #mjDashboardRoot .eq-quick-filters select{flex:1; min-width:105px;}
+  }
 </style>
 </head>
 <body>
@@ -388,11 +603,195 @@
     </div>
   </div>
 
-  <!-- ===== MJ SECTION (unchanged / placeholder) ===== -->
+  <!-- ===== MJ SECTION: Student Enquiry Tracking Dashboard ===== -->
   <div class="section" id="mjSection">
     <button class="back-btn" onclick="showSection('dashboard')">&larr; Back to Dashboard</button>
-    <div class="placeholder-card">
-      MJ section — no changes made here.
+
+    <div id="mjDashboardRoot">
+      <div class="eq-toolbar">
+        <h2>Student Enquiry Tracking Dashboard</h2>
+        <div class="eq-toolbar-actions">
+          <span id="eqDataStatus" class="eq-data-status">Connecting to MJ sheet...</span>
+          <div class="eq-search-box">
+            <span>&#128269;</span>
+            <input type="text" id="eqSearchBox" placeholder="Search by name...">
+          </div>
+          <label class="eq-auto-refresh-toggle">
+            <span class="eq-switch">
+              <input type="checkbox" id="eqAutoRefreshToggle">
+              <span class="eq-slider"></span>
+            </span>
+            Auto-refresh
+          </label>
+          <button class="eq-ghost-btn" onclick="eqExportToExcel()">&#8681; Export to Excel</button>
+          <button class="eq-primary-btn" id="eqRefreshBtn" onclick="eqHandleRefresh()">
+            <span class="eq-refresh-icon">&#8635;</span> Refresh Data
+          </button>
+        </div>
+      </div>
+
+      <div class="eq-filter-bar">
+        <div class="eq-period-btns" id="eqPeriodBtns">
+          <button class="eq-period-btn" data-period="today">Today</button>
+          <button class="eq-period-btn active" data-period="currentMonth">Current Month</button>
+          <button class="eq-period-btn" data-period="lastMonth">Last Month</button>
+          <button class="eq-period-btn" data-period="custom">Custom Date Range</button>
+        </div>
+        <button class="eq-period-btn" id="eqSourceWiseBtn" onclick="eqOpenSourceWise()">Source Wise</button>
+        <div class="eq-custom-range" id="eqCustomRange">
+          <input type="date" id="eqRangeStart">
+          <span>to</span>
+          <input type="date" id="eqRangeEnd">
+        </div>
+        <div class="eq-quick-filters">
+          <select id="eqFType">
+            <option value="">MBBS / Non-MBBS</option>
+            <option value="MBBS">MBBS only</option>
+            <option value="Non-MBBS">Non-MBBS only</option>
+          </select>
+          <select id="eqFStatus">
+            <option value="">All Status</option>
+            <option>New Enquiry</option>
+            <option>Follow-up</option>
+            <option>Documents Received</option>
+            <option>Documents Pending</option>
+            <option>Converted</option>
+            <option>Closed</option>
+          </select>
+          <button class="eq-clear-filters" onclick="eqClearFilters()">Clear filters</button>
+        </div>
+      </div>
+
+      <div id="eqMainContent">
+        <div class="eq-kpi-grid" id="eqKpiGrid"></div>
+
+        <div class="eq-middle-row">
+          <div class="eq-section-card">
+            <h3>Enquiry Trend <span class="eq-sub">Total / MBBS / Non-MBBS</span></h3>
+            <div class="eq-chart-wrap"><canvas id="eqTrendChart"></canvas></div>
+            <div class="eq-chart-hint">Click any point on the chart to filter the detailed table below to that day.</div>
+          </div>
+          <div class="eq-section-card">
+            <h3>MBBS vs Non-MBBS</h3>
+            <div class="eq-chart-wrap"><canvas id="eqDonutChart"></canvas></div>
+          </div>
+        </div>
+
+        <div class="eq-section-card">
+          <h3>Documents Received <span class="eq-sub" id="eqDocsSourceLabel"></span></h3>
+          <div class="eq-docs-grid" id="eqDocsGrid">
+            <div class="eq-docs-stat">
+              <div class="eq-docs-label">Total Documents Received</div>
+              <div class="eq-docs-value" id="eqDocsTotal">-</div>
+            </div>
+            <div class="eq-docs-stat">
+              <div class="eq-docs-label">Received Today</div>
+              <div class="eq-docs-value" id="eqDocsToday">-</div>
+            </div>
+            <div class="eq-docs-stat">
+              <div class="eq-docs-label">Received This Month</div>
+              <div class="eq-docs-value" id="eqDocsThisMonth">-</div>
+            </div>
+            <div class="eq-docs-stat">
+              <div class="eq-docs-label">Received Last Month</div>
+              <div class="eq-docs-value" id="eqDocsLastMonth">-</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="eq-bottom-row">
+          <div class="eq-section-card">
+            <h3>Detailed Enquiry Table <span class="eq-sub" id="eqTableCount"></span></h3>
+            <div class="eq-table-scroll">
+              <table class="eq-table">
+                <thead>
+                  <tr>
+                    <th data-sort="date">Date</th>
+                    <th data-sort="name">Student Name</th>
+                    <th data-sort="type">Type</th>
+                    <th data-sort="status">Status</th>
+                    <th data-sort="docs">Documents</th>
+                  </tr>
+                </thead>
+                <tbody id="eqTableBody"></tbody>
+              </table>
+            </div>
+            <div class="eq-table-footer">
+              <span id="eqPageInfo"></span>
+              <div class="eq-pager" id="eqPager"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="eqDetailView" class="eq-detail-view">
+        <button class="eq-detail-back" onclick="eqCloseDetail()">&larr; Back to Dashboard</button>
+        <div class="eq-section-card">
+          <h3 id="eqDetailTitle">Detail</h3>
+          <div class="eq-table-scroll">
+            <table class="eq-table">
+              <thead id="eqDetailThead"></thead>
+              <tbody id="eqDetailTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="eqSourceWiseView" class="eq-detail-view">
+        <button class="eq-detail-back" onclick="eqCloseSourceWise()">&larr; Back to Dashboard</button>
+
+        <div class="eq-section-card">
+          <div class="eq-sw-header-row">
+            <h3>Source Wise Report</h3>
+            <div class="eq-sw-total-badge">TOTAL <span id="eqSwTotal">-</span></div>
+          </div>
+
+          <div class="eq-sw-daterange">
+            <label>From <input type="text" id="eqSwStart" placeholder="DD/MM/YYYY" readonly></label>
+            <label>To <input type="text" id="eqSwEnd" placeholder="DD/MM/YYYY" readonly></label>
+            <button class="eq-primary-btn" onclick="eqLoadSourceWise()">Apply</button>
+            <span id="eqSwStatus" class="eq-sub"></span>
+          </div>
+
+          <div class="eq-sw-block">
+            <h4>FB</h4>
+            <div class="eq-sw-subblock">
+              <h5>Study Abroad</h5>
+              <div id="eqSwFbStudyList" class="eq-sw-list"></div>
+            </div>
+            <div class="eq-sw-subblock">
+              <h5>MBBS</h5>
+              <div id="eqSwFbMbbsList" class="eq-sw-list"></div>
+            </div>
+          </div>
+
+          <div class="eq-sw-block">
+            <h4>Best Overseas</h4>
+            <div id="eqSwBoList" class="eq-sw-list"></div>
+          </div>
+
+          <div class="eq-sw-block">
+            <h4>Reference</h4>
+            <div class="eq-sw-list">
+              <div class="eq-sw-list-item"><span class="name">Reference</span><span class="count" id="eqSwReference">-</span></div>
+            </div>
+          </div>
+
+          <div class="eq-sw-block">
+            <h4>Ireland Landing Page</h4>
+            <div class="eq-sw-list">
+              <div class="eq-sw-list-item"><span class="name">Ireland Landing Page</span><span class="count" id="eqSwIreland">-</span></div>
+            </div>
+          </div>
+
+          <div class="eq-sw-block">
+            <h4>Website</h4>
+            <div class="eq-sw-list">
+              <div class="eq-sw-list-item"><span class="name">Website</span><span class="count" id="eqSwWebsite">-</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -505,7 +904,7 @@ async function loadFromSheet(){
   }
   try {
     refreshBtn.classList.add('spinning');
-    setStatus('Loading from sheet…', 'saving');
+    setStatus('Loading from sheet...', 'saving');
     const res = await fetch(SCRIPT_URL);
     const json = await res.json();
     if (json.status !== 'ok') throw new Error(json.message || 'bad response');
@@ -545,7 +944,7 @@ async function saveCell(row, col, value){
     return;
   }
   try {
-    setStatus('Saving…', 'saving');
+    setStatus('Saving...', 'saving');
     const res = await fetch(SCRIPT_URL, {
       method: 'POST',
       body: JSON.stringify({ row: Number(row), col: Number(col), value: value })
@@ -563,6 +962,671 @@ function handleRefreshClick(){
   loadFromSheet();
 }
 
+/* =========================================================
+   MJ SECTION - STUDENT ENQUIRY TRACKING DASHBOARD
+   (live data - fetched from the "MJ" tab of your Google Sheet via the
+   same Apps Script Web App used for the SJ report; ?action=enquiries)
+   ========================================================= */
+function eqFmtDate(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+let eqAllData = [];
+let eqDataLoaded = false;
+
+async function eqLoadLiveData(){
+  const eqStatusEl = document.getElementById('eqDataStatus');
+  if (SCRIPT_URL.includes('PASTE_YOUR')) {
+    if (eqStatusEl) eqStatusEl.textContent = 'Sheet not connected yet';
+    return;
+  }
+  try {
+    if (eqStatusEl) eqStatusEl.textContent = 'Loading live data from MJ sheet...';
+    const res = await fetch(SCRIPT_URL + '?action=enquiries');
+    const json = await res.json();
+    if (json.status !== 'ok') throw new Error(json.message || 'bad response');
+
+    eqAllData = json.records.map((r, i) => ({
+      id: i + 1,
+      date: r.date,
+      name: r.name,
+      status: r.status,
+      type: r.type,
+      docs: r.docs
+    }));
+
+    // Populate the Status filter dynamically from whatever status values actually exist in the sheet
+    const statusSelect = document.getElementById('eqFStatus');
+    const existingValue = statusSelect.value;
+    const uniqueStatuses = [...new Set(eqAllData.map(r => r.status).filter(s => s))].sort();
+    statusSelect.innerHTML = '<option value="">All Status</option>' +
+      uniqueStatuses.map(s => `<option value="${s}">${s}</option>`).join('');
+    statusSelect.value = existingValue;
+
+    eqDataLoaded = true;
+    if (eqStatusEl) eqStatusEl.textContent = `Connected - ${eqAllData.length} enquiries loaded from MJ sheet`;
+  } catch (err) {
+    if (eqStatusEl) eqStatusEl.textContent = 'Could not load MJ sheet data';
+  }
+}
+
+let eqDocsDates = []; // raw date strings from MJ!AB:AD (Timestamp basis)
+let eqDocsRows = [];    // full row detail (all 3 AB:AD columns) for the clickable detail view
+let eqDocsHeaders = []; // header labels for AB, AC, AD as read from the sheet
+
+async function eqLoadDocumentsData(){
+  if (SCRIPT_URL.includes('PASTE_YOUR')) return;
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=documents');
+    const json = await res.json();
+    if (json.status !== 'ok') throw new Error(json.message || 'bad response');
+
+    eqDocsDates = json.records || [];
+    eqDocsRows = json.rows || [];
+    eqDocsHeaders = json.headers || [];
+
+    document.getElementById('eqDocsTotal').textContent = json.total;
+    document.getElementById('eqDocsToday').textContent = json.today;
+    document.getElementById('eqDocsThisMonth').textContent = json.thisMonth;
+    document.getElementById('eqDocsLastMonth').textContent = json.lastMonth;
+    document.getElementById('eqDocsSourceLabel').textContent = `(source: MJ!${json.sourceColumn})`;
+  } catch (err) {
+    document.getElementById('eqDocsSourceLabel').textContent = '(could not load)';
+  }
+}
+
+function eqCountDocsInRange(start, end){
+  return eqDocsDates.filter(dateStr => {
+    const d = eqParseYMD(dateStr);
+    return d >= start && d <= end;
+  }).length;
+}
+
+let eqAppliedDates = []; // raw date strings from MJ!AF (Timestamp basis) - powers the "Applied" KPI card
+let eqAppliedRows = [];    // full row detail (all 4 AF:AI columns) for the clickable detail view
+let eqAppliedHeaders = []; // header labels for AF, AG, AH, AI as read from the sheet
+
+async function eqLoadAppliedData(){
+  if (SCRIPT_URL.includes('PASTE_YOUR')) return;
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=applied');
+    const json = await res.json();
+    if (json.status !== 'ok') throw new Error(json.message || 'bad response');
+    eqAppliedDates = json.records || [];
+    eqAppliedRows = json.rows || [];
+    eqAppliedHeaders = json.headers || [];
+  } catch (err) {
+    eqAppliedDates = [];
+    eqAppliedRows = [];
+    eqAppliedHeaders = [];
+  }
+}
+
+function eqCountAppliedInRange(start, end){
+  return eqAppliedDates.filter(dateStr => {
+    const d = eqParseYMD(dateStr);
+    return d >= start && d <= end;
+  }).length;
+}
+
+let eqActivePeriod = 'currentMonth';
+let eqCustomStart = null, eqCustomEnd = null;
+let eqFilters = { course:'', type:'', state:'', counsellor:'', status:'', search:'' };
+let eqSelectedDate = null;
+let eqSortKey = 'date', eqSortDir = -1;
+let eqCurrentPage = 1;
+const EQ_PAGE_SIZE = 10;
+
+function eqToDateOnly(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
+function eqParseYMD(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y, m-1, d); }
+
+function eqGetPeriodRange(period){
+  const today = eqToDateOnly(new Date());
+  let start, end, prevStart, prevEnd;
+
+  if (period === 'today'){
+    start = new Date(today); end = new Date(today);
+    prevStart = new Date(today); prevStart.setDate(prevStart.getDate()-1);
+    prevEnd = new Date(prevStart);
+  } else if (period === 'currentMonth'){
+    start = new Date(today.getFullYear(), today.getMonth(), 1);
+    end = new Date(today);
+    prevStart = new Date(today.getFullYear(), today.getMonth()-1, 1);
+    prevEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+  } else if (period === 'lastMonth'){
+    start = new Date(today.getFullYear(), today.getMonth()-1, 1);
+    end = new Date(today.getFullYear(), today.getMonth(), 0);
+    prevStart = new Date(today.getFullYear(), today.getMonth()-2, 1);
+    prevEnd = new Date(today.getFullYear(), today.getMonth()-1, 0);
+  } else {
+    start = eqCustomStart ? eqParseYMD(eqCustomStart) : today;
+    end = eqCustomEnd ? eqParseYMD(eqCustomEnd) : today;
+    const spanDays = Math.round((end-start)/86400000)+1;
+    prevEnd = new Date(start); prevEnd.setDate(prevEnd.getDate()-1);
+    prevStart = new Date(prevEnd); prevStart.setDate(prevStart.getDate()-(spanDays-1));
+  }
+  return {start, end, prevStart, prevEnd};
+}
+
+function eqInRange(dateStr, start, end){
+  const d = eqParseYMD(dateStr);
+  return d >= start && d <= end;
+}
+
+function eqApplyQuickFilters(rows){
+  return rows.filter(r =>
+    (!eqFilters.type || r.type === eqFilters.type) &&
+    (!eqFilters.status || r.status === eqFilters.status) &&
+    (!eqFilters.search || r.name.toLowerCase().includes(eqFilters.search))
+  );
+}
+
+function eqPopulateSelect(id, items){
+  const sel = document.getElementById(id);
+  items.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    sel.appendChild(opt);
+  });
+}
+
+
+const EQ_CLICKABLE_KPI_KEYS = ['total', 'mbbs', 'nonmbbs', 'docrecv', 'docpend'];
+
+const eqKpiDefs = [
+  {key:'total', label:'Total Enquiries', cls:''},
+  {key:'mbbs', label:'MBBS Enquiries', cls:'mbbs'},
+  {key:'nonmbbs', label:'Non-MBBS Enquiries', cls:'nonmbbs'},
+  {key:'docrecv', label:'Documents Received', cls:'docrecv'},
+  {key:'docpend', label:'Applied', cls:'docpend'},
+  {key:'convmbbs', label:'MBBS Conversion %', cls:'convmbbs'},
+  {key:'convnonmbbs', label:'Non-MBBS Conversion %', cls:'convnonmbbs'},
+];
+
+function eqComputeStats(rows){
+  const total = rows.length;
+  const mbbs = rows.filter(r=>r.type==='MBBS').length;
+  const nonmbbs = total - mbbs;
+  const docrecv = rows.filter(r=>r.docs).length;
+  const docpend = total - docrecv;
+  const mbbsConv = mbbs ? (rows.filter(r=>r.type==='MBBS' && r.status==='Converted').length / mbbs * 100) : 0;
+  const nonmbbsConv = nonmbbs ? (rows.filter(r=>r.type==='Non-MBBS' && r.status==='Converted').length / nonmbbs * 100) : 0;
+  return {total, mbbs, nonmbbs, docrecv, docpend, convmbbs:mbbsConv, convnonmbbs:nonmbbsConv};
+}
+
+function eqPctChange(cur, prev){
+  if (prev === 0) return cur === 0 ? 0 : 100;
+  return ((cur - prev) / prev) * 100;
+}
+
+function eqRenderKPIs(curRows, prevRows, docsCurCount, docsPrevCount, appliedCurCount, appliedPrevCount){
+  const cur = eqComputeStats(curRows);
+  const prev = eqComputeStats(prevRows);
+  // Documents Received now comes from MJ!AB:AD (Timestamp-based), not the status "dr" flag
+  cur.docrecv = docsCurCount;
+  prev.docrecv = docsPrevCount;
+  // Applied (formerly Documents Pending) now comes from MJ!AF (Timestamp-based)
+  cur.docpend = appliedCurCount;
+  prev.docpend = appliedPrevCount;
+  const grid = document.getElementById('eqKpiGrid');
+  grid.innerHTML = '';
+
+  eqKpiDefs.forEach(def => {
+    const isPct = def.key.startsWith('conv');
+    const curVal = cur[def.key];
+    const prevVal = prev[def.key];
+    const change = eqPctChange(curVal, prevVal);
+    const up = change >= 0;
+    const displayVal = isPct ? curVal.toFixed(1) + '%' : curVal;
+    const isClickable = EQ_CLICKABLE_KPI_KEYS.includes(def.key);
+
+    const card = document.createElement('div');
+    card.className = 'eq-kpi-card ' + def.cls + (isClickable ? ' eq-clickable' : '');
+    card.innerHTML = `
+      <div class="eq-kpi-label">${def.label}</div>
+      <div class="eq-kpi-value">${displayVal}</div>
+      <div class="eq-kpi-compare">
+        <span class="${up ? 'eq-trend-up' : 'eq-trend-down'}">${up ? '&#8593;' : '&#8595;'} ${Math.abs(change).toFixed(1)}%</span>
+        vs previous period
+      </div>
+    `;
+    if (isClickable){
+      card.tabIndex = 0;
+      card.setAttribute('role', 'button');
+      card.setAttribute('aria-label', `View ${def.label} details`);
+      card.addEventListener('click', () => eqOpenDetail(def.key));
+      card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); eqOpenDetail(def.key); } });
+    }
+    grid.appendChild(card);
+  });
+}
+
+let eqTrendChartInstance = null;
+let eqDonutChartInstance = null;
+
+function eqRenderTrendChart(){
+  const today = eqToDateOnly(new Date());
+  const days = [];
+  for (let i=29; i>=0; i--){
+    const d = new Date(today); d.setDate(d.getDate()-i);
+    days.push(eqFmtDate(d));
+  }
+  const totals = days.map(ds => eqAllData.filter(r=>r.date===ds).length);
+  const mbbsC = days.map(ds => eqAllData.filter(r=>r.date===ds && r.type==='MBBS').length);
+  const nonC = days.map(ds => eqAllData.filter(r=>r.date===ds && r.type==='Non-MBBS').length);
+
+  const ctx = document.getElementById('eqTrendChart').getContext('2d');
+  if (eqTrendChartInstance) eqTrendChartInstance.destroy();
+  eqTrendChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: days.map(d => d.slice(5)),
+      datasets: [
+        { label:'Total', data: totals, borderColor:'#2563eb', backgroundColor:'#2563eb', tension:0.3, pointRadius:3 },
+        { label:'MBBS', data: mbbsC, borderColor:'#d97706', backgroundColor:'#d97706', tension:0.3, pointRadius:3 },
+        { label:'Non-MBBS', data: nonC, borderColor:'#0d9488', backgroundColor:'#0d9488', tension:0.3, pointRadius:3 },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'top', labels:{ boxWidth:10, font:{size:11} } } },
+      scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } }, x:{ ticks:{ font:{size:10} } } },
+      onClick:(evt, elements) => {
+        if (elements.length){
+          const idx = elements[0].index;
+          eqSelectedDate = days[idx];
+          eqCurrentPage = 1;
+          eqRenderDetailedTable();
+        }
+      }
+    }
+  });
+}
+
+// Wraps eqRenderTrendChart so that a Chart.js sizing error (which can happen
+// if the canvas's parent was just switched from display:none to visible in
+// the same tick, before the browser has recalculated layout) never blocks
+// the rest of a click handler - e.g. switching period filters right after
+// closing the Source Wise / detail views.
+function eqSafeRenderTrendChart(){
+  requestAnimationFrame(() => {
+    try {
+      eqRenderTrendChart();
+    } catch (err) {
+      // swallow - KPI cards and table have already rendered by this point
+    }
+  });
+}
+
+function eqRenderDonutChart(curRows){
+  const stats = eqComputeStats(curRows);
+  const ctx = document.getElementById('eqDonutChart').getContext('2d');
+  if (eqDonutChartInstance) eqDonutChartInstance.destroy();
+  eqDonutChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['MBBS', 'Non-MBBS'],
+      datasets: [{ data:[stats.mbbs, stats.nonmbbs], backgroundColor:['#d97706','#0d9488'], borderWidth:0 }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{ boxWidth:10, font:{size:11} } } },
+      cutout:'62%'
+    }
+  });
+}
+
+/* =========================================================
+   CLICKABLE KPI CARDS - drill-down detail view
+   The record count shown here always matches the number on the card,
+   because both are computed from the exact same filtered data.
+   ========================================================= */
+function eqEscapeHtml_(val){
+  return String(val === null || val === undefined ? '' : val)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function eqOpenDetail(kpiKey){
+  const { start, end } = eqGetPeriodRange(eqActivePeriod);
+  let title = '';
+  let theadHtml = '';
+  let bodyHtml = '';
+  let count = 0;
+
+  if (kpiKey === 'total' || kpiKey === 'mbbs' || kpiKey === 'nonmbbs'){
+    let rows = eqAllData.filter(r => eqInRange(r.date, start, end));
+    rows = eqApplyQuickFilters(rows);
+    if (kpiKey === 'mbbs') rows = rows.filter(r => r.type === 'MBBS');
+    if (kpiKey === 'nonmbbs') rows = rows.filter(r => r.type === 'Non-MBBS');
+
+    const labels = { total: 'Total Enquiries', mbbs: 'MBBS Enquiries', nonmbbs: 'Non-MBBS Enquiries' };
+    title = labels[kpiKey];
+    count = rows.length;
+
+    theadHtml = '<tr><th>S.No.</th><th>Student Name</th><th>Phone Number</th><th>Type</th><th>Status</th><th>Enquiry Date</th><th>Source</th></tr>';
+    bodyHtml = rows.map((r, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${eqEscapeHtml_(r.name) || '-'}</td>
+        <td>${eqEscapeHtml_(r.phone) || '-'}</td>
+        <td>${eqEscapeHtml_(r.type)}</td>
+        <td>${eqEscapeHtml_(r.status) || '-'}</td>
+        <td>${r.date}</td>
+        <td>${eqEscapeHtml_(r.source) || '-'}</td>
+      </tr>
+    `).join('');
+
+  } else if (kpiKey === 'docrecv'){
+    const rows = eqDocsRows.filter(r => { const d = eqParseYMD(r.date); return d >= start && d <= end; });
+    title = 'Documents Received';
+    count = rows.length;
+
+    theadHtml = '<tr><th>S.No.</th>' + eqDocsHeaders.map(h => `<th>${eqEscapeHtml_(h)}</th>`).join('') + '</tr>';
+    bodyHtml = rows.map((r, i) => `
+      <tr><td>${i + 1}</td>${r.values.map(v => `<td>${eqEscapeHtml_(v) || '-'}</td>`).join('')}</tr>
+    `).join('');
+
+  } else if (kpiKey === 'docpend'){
+    const rows = eqAppliedRows.filter(r => { const d = eqParseYMD(r.date); return d >= start && d <= end; });
+    title = 'Applied';
+    count = rows.length;
+
+    theadHtml = '<tr><th>S.No.</th>' + eqAppliedHeaders.map(h => `<th>${eqEscapeHtml_(h)}</th>`).join('') + '</tr>';
+    bodyHtml = rows.map((r, i) => `
+      <tr><td>${i + 1}</td>${r.values.map(v => `<td>${eqEscapeHtml_(v) || '-'}</td>`).join('')}</tr>
+    `).join('');
+  } else {
+    return; // not a clickable card
+  }
+
+  document.getElementById('eqDetailTitle').textContent = `${title} (${count})`;
+  document.getElementById('eqDetailThead').innerHTML = theadHtml;
+  document.getElementById('eqDetailTbody').innerHTML = bodyHtml ||
+    `<tr><td colspan="10" style="text-align:center;color:var(--eq-text-soft);padding:24px;">No records found for the current filters</td></tr>`;
+
+  document.getElementById('eqMainContent').style.display = 'none';
+  document.getElementById('eqDetailView').style.display = 'block';
+}
+
+function eqCloseDetail(){
+  document.getElementById('eqDetailView').style.display = 'none';
+  document.getElementById('eqMainContent').style.display = 'block';
+}
+
+/* =========================================================
+   SOURCE WISE - placeholder section (data/logic added separately)
+   ========================================================= */
+// Called by every filter control (period buttons, custom range, quick
+// filters, search, clear) so that using a filter while Source Wise (or a
+// KPI detail view) is open automatically brings the main dashboard back
+// into view - no manual "Back to Dashboard" click required.
+function eqEnsureMainView(){
+  document.getElementById('eqDetailView').style.display = 'none';
+  document.getElementById('eqSourceWiseView').style.display = 'none';
+  document.getElementById('eqMainContent').style.display = 'block';
+}
+
+function eqOpenSourceWise(){
+  document.getElementById('eqMainContent').style.display = 'none';
+  document.getElementById('eqDetailView').style.display = 'none';
+  document.getElementById('eqSourceWiseView').style.display = 'block';
+  eqInitSourceWiseDates();
+  eqLoadSourceWise();
+}
+
+function eqCloseSourceWise(){
+  document.getElementById('eqSourceWiseView').style.display = 'none';
+  document.getElementById('eqMainContent').style.display = 'block';
+}
+
+// Default the Custom Date Range to the current month the first time
+// Source Wise is opened (only if not already set).
+let eqSwStartISO = '';
+let eqSwEndISO = '';
+let eqSwStartPicker = null;
+let eqSwEndPicker = null;
+
+function eqInitSourceWisePickers(){
+  if (eqSwStartPicker && eqSwEndPicker) return; // already initialized
+  eqSwStartPicker = flatpickr('#eqSwStart', {
+    dateFormat: 'd/m/Y',
+    onChange: (selectedDates) => {
+      if (selectedDates[0]) { eqSwStartISO = eqFmtDate(selectedDates[0]); eqLoadSourceWise(); }
+    }
+  });
+  eqSwEndPicker = flatpickr('#eqSwEnd', {
+    dateFormat: 'd/m/Y',
+    onChange: (selectedDates) => {
+      if (selectedDates[0]) { eqSwEndISO = eqFmtDate(selectedDates[0]); eqLoadSourceWise(); }
+    }
+  });
+}
+
+function eqInitSourceWiseDates(){
+  eqInitSourceWisePickers();
+  if (eqSwStartISO && eqSwEndISO) return; // already set from a previous open
+  const { start, end } = eqGetPeriodRange('currentMonth');
+  eqSwStartISO = eqFmtDate(start);
+  eqSwEndISO = eqFmtDate(end);
+  eqSwStartPicker.setDate(start, false);
+  eqSwEndPicker.setDate(end, false);
+}
+
+async function eqLoadSourceWise(){
+  const statusEl = document.getElementById('eqSwStatus');
+
+  if (SCRIPT_URL.includes('PASTE_YOUR')) {
+    statusEl.textContent = 'Sheet not connected yet';
+    return;
+  }
+  try {
+    statusEl.textContent = 'Loading...';
+    const url = `${SCRIPT_URL}?action=sourcewise&start=${encodeURIComponent(eqSwStartISO)}&end=${encodeURIComponent(eqSwEndISO)}`;
+    const res = await fetch(url);
+    const json = await res.json();
+    if (json.status !== 'ok') throw new Error(json.message || 'bad response');
+
+    const renderList = (containerId, items) => {
+      const el = document.getElementById(containerId);
+      el.innerHTML = items.length
+        ? items.map(item => `
+            <div class="eq-sw-list-item">
+              <span class="name">${eqEscapeHtml_(item.name)}</span>
+              <span class="count">${item.count}</span>
+            </div>
+          `).join('')
+        : '<div class="eq-sw-empty">No records for this date range</div>';
+    };
+
+    renderList('eqSwFbStudyList', json.fb.studyAbroad);
+    renderList('eqSwFbMbbsList', json.fb.mbbs);
+    renderList('eqSwBoList', json.bestOverseas);
+    document.getElementById('eqSwReference').textContent = json.reference;
+    document.getElementById('eqSwIreland').textContent = json.ireland;
+    document.getElementById('eqSwWebsite').textContent = json.website;
+
+    const fbStudyTotal = json.fb.studyAbroad.reduce((sum, item) => sum + item.count, 0);
+    const fbMbbsTotal = json.fb.mbbs.reduce((sum, item) => sum + item.count, 0);
+    const boTotal = json.bestOverseas.reduce((sum, item) => sum + item.count, 0);
+    const grandTotal = fbStudyTotal + fbMbbsTotal + boTotal + json.reference + json.ireland + json.website;
+    document.getElementById('eqSwTotal').textContent = grandTotal;
+
+    statusEl.textContent = '';
+  } catch (err) {
+    statusEl.textContent = 'Could not load Source Wise data';
+  }
+}
+
+
+function eqStatusBadgeClass(status){
+  return {
+    'New Enquiry':'new', 'Follow-up':'followup', 'Documents Received':'docrecv',
+    'Documents Pending':'docpend', 'Converted':'converted', 'Closed':'closed'
+  }[status] || 'new';
+}
+
+function eqGetFilteredRows(){
+  const {start, end} = eqGetPeriodRange(eqActivePeriod);
+  let rows = eqAllData.filter(r => eqInRange(r.date, start, end));
+  if (eqSelectedDate) rows = rows.filter(r => r.date === eqSelectedDate);
+  rows = eqApplyQuickFilters(rows);
+  return rows;
+}
+
+function eqRenderDetailedTable(){
+  let rows = eqGetFilteredRows();
+
+  rows = rows.slice().sort((a,b) => {
+    let av=a[eqSortKey], bv=b[eqSortKey];
+    if (eqSortKey==='docs'){ av = av?1:0; bv = bv?1:0; }
+    if (av < bv) return -1*eqSortDir;
+    if (av > bv) return 1*eqSortDir;
+    return 0;
+  });
+
+  document.getElementById('eqTableCount').textContent = `(${rows.length} records)`;
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / EQ_PAGE_SIZE));
+  if (eqCurrentPage > totalPages) eqCurrentPage = totalPages;
+  const pageRows = rows.slice((eqCurrentPage-1)*EQ_PAGE_SIZE, eqCurrentPage*EQ_PAGE_SIZE);
+
+  document.getElementById('eqTableBody').innerHTML = pageRows.map(r => `
+    <tr>
+      <td>${r.date}</td>
+      <td>${r.name}</td>
+      <td>${r.type}</td>
+      <td><span class="eq-badge ${eqStatusBadgeClass(r.status)}">${r.status}</span></td>
+      <td><span class="eq-docs-icon ${r.docs?'yes':'no'}">${r.docs?'&#10003; Received':'&#10007; Pending'}</span></td>
+    </tr>
+  `).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--eq-text-soft);padding:24px;">No matching records</td></tr>`;
+
+  document.getElementById('eqPageInfo').textContent = `Page ${eqCurrentPage} of ${totalPages}`;
+  const pager = document.getElementById('eqPager');
+  pager.innerHTML = '';
+  const prevBtn = document.createElement('button');
+  prevBtn.textContent = '< Prev';
+  prevBtn.disabled = eqCurrentPage === 1;
+  prevBtn.onclick = () => { eqCurrentPage--; eqRenderDetailedTable(); };
+  pager.appendChild(prevBtn);
+  const nextBtn = document.createElement('button');
+  nextBtn.textContent = 'Next >';
+  nextBtn.disabled = eqCurrentPage === totalPages;
+  nextBtn.onclick = () => { eqCurrentPage++; eqRenderDetailedTable(); };
+  pager.appendChild(nextBtn);
+
+  return rows;
+}
+
+document.querySelectorAll('.eq-table th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.sort;
+    if (eqSortKey === key) eqSortDir *= -1; else { eqSortKey = key; eqSortDir = 1; }
+    eqRenderDetailedTable();
+  });
+});
+
+function eqExportToExcel(){
+  const rows = eqGetFilteredRows();
+  const data = rows.map(r => ({
+    Date:r.date, "Student Name":r.name, Type:r.type,
+    Status:r.status, Documents:r.docs?'Received':'Pending'
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Enquiries");
+  XLSX.writeFile(wb, `Enquiry_Report_${eqFmtDate(new Date())}.xlsx`);
+}
+
+function eqRenderAll(){
+  const {start, end, prevStart, prevEnd} = eqGetPeriodRange(eqActivePeriod);
+  let curRows = eqAllData.filter(r => eqInRange(r.date, start, end));
+  let prevRows = eqAllData.filter(r => eqInRange(r.date, prevStart, prevEnd));
+  curRows = eqApplyQuickFilters(curRows);
+  prevRows = eqApplyQuickFilters(prevRows);
+
+  const docsCurCount = eqCountDocsInRange(start, end);
+  const docsPrevCount = eqCountDocsInRange(prevStart, prevEnd);
+  const appliedCurCount = eqCountAppliedInRange(start, end);
+  const appliedPrevCount = eqCountAppliedInRange(prevStart, prevEnd);
+
+  // Each render step is isolated in its own try/catch so a canvas-sizing
+  // error in one chart (e.g. right after switching a hidden view back to
+  // visible) can never prevent the KPI cards or table from updating.
+  try { eqRenderKPIs(curRows, prevRows, docsCurCount, docsPrevCount, appliedCurCount, appliedPrevCount); } catch (err) {}
+  try { eqRenderDonutChart(curRows); } catch (err) {}
+  try { eqRenderDetailedTable(); } catch (err) {}
+}
+
+document.getElementById('eqPeriodBtns').addEventListener('click', (e) => {
+  const btn = e.target.closest('.eq-period-btn');
+  if (!btn) return;
+  eqEnsureMainView();
+  document.querySelectorAll('.eq-period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  eqActivePeriod = btn.dataset.period;
+  eqSelectedDate = null;
+  document.getElementById('eqCustomRange').classList.toggle('show', eqActivePeriod === 'custom');
+  eqCurrentPage = 1;
+  eqRenderAll();
+  eqSafeRenderTrendChart();
+});
+
+document.getElementById('eqRangeStart').addEventListener('change', (e) => { eqEnsureMainView(); eqCustomStart = e.target.value; if(eqActivePeriod==='custom'){eqCurrentPage=1; eqRenderAll();} });
+document.getElementById('eqRangeEnd').addEventListener('change', (e) => { eqEnsureMainView(); eqCustomEnd = e.target.value; if(eqActivePeriod==='custom'){eqCurrentPage=1; eqRenderAll();} });
+
+['eqFType','eqFStatus'].forEach(id => {
+  document.getElementById(id).addEventListener('change', (e) => {
+    eqEnsureMainView();
+    const map = {eqFType:'type', eqFStatus:'status'};
+    eqFilters[map[id]] = e.target.value;
+    eqCurrentPage = 1;
+    eqRenderAll();
+  });
+});
+
+document.getElementById('eqSearchBox').addEventListener('input', (e) => {
+  eqEnsureMainView();
+  eqFilters.search = e.target.value.trim().toLowerCase();
+  eqCurrentPage = 1;
+  eqRenderDetailedTable();
+});
+
+function eqClearFilters(){
+  eqEnsureMainView();
+  eqFilters = {course:'',type:'',state:'',counsellor:'',status:'',search:''};
+  document.getElementById('eqSearchBox').value = '';
+  ['eqFType','eqFStatus'].forEach(id => document.getElementById(id).value = '');
+  eqSelectedDate = null;
+  eqCurrentPage = 1;
+  eqRenderAll();
+}
+
+async function eqHandleRefresh(){
+  const btn = document.getElementById('eqRefreshBtn');
+  btn.classList.add('eq-spinning');
+  eqEnsureMainView();
+  await Promise.all([eqLoadLiveData(), eqLoadDocumentsData(), eqLoadAppliedData()]);
+  eqRenderAll();
+  eqSafeRenderTrendChart();
+  btn.classList.remove('eq-spinning');
+}
+
+let eqAutoRefreshInterval = null;
+document.getElementById('eqAutoRefreshToggle').addEventListener('change', (e) => {
+  if (e.target.checked){
+    eqAutoRefreshInterval = setInterval(eqHandleRefresh, 30000);
+  } else {
+    clearInterval(eqAutoRefreshInterval);
+  }
+});
+
+let eqInitialized = false;
+async function eqInitDashboard(){
+  await Promise.all([eqLoadLiveData(), eqLoadDocumentsData(), eqLoadAppliedData()]);
+  eqRenderAll();
+  eqSafeRenderTrendChart();
+}
 function showSection(name){
   document.getElementById('dashboardSection').classList.remove('active');
   document.getElementById('mjSection').classList.remove('active');
@@ -570,8 +1634,10 @@ function showSection(name){
 
   if (name === 'dashboard'){
     document.getElementById('dashboardSection').classList.add('active');
+    if (eqInitialized) { eqCloseDetail(); eqCloseSourceWise(); }
   } else if (name === 'mj'){
     document.getElementById('mjSection').classList.add('active');
+    if (!eqInitialized){ eqInitialized = true; eqInitDashboard(); }
   } else if (name === 'sj'){
     document.getElementById('sjSection').classList.add('active');
     if (!reportLoaded) loadFromSheet();
