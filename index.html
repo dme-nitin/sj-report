@@ -361,6 +361,8 @@
     --eq-green-light:#e9f9ee;
     --eq-red:#dc2626;
     --eq-red-light:#fdeaea;
+    --eq-purple:#7c3aed;
+    --eq-purple-light:#f1e8fe;
     --eq-gray:#64748b;
     --eq-border:#e3e8ef;
     --eq-card:#ffffff;
@@ -444,6 +446,7 @@
   #mjDashboardRoot .eq-kpi-card.docpend{border-left-color:var(--eq-red);}
   #mjDashboardRoot .eq-kpi-card.convmbbs{border-left-color:var(--eq-amber);}
   #mjDashboardRoot .eq-kpi-card.convnonmbbs{border-left-color:var(--eq-teal);}
+  #mjDashboardRoot .eq-kpi-card.paid{border-left-color:var(--eq-purple);}
   #mjDashboardRoot .eq-kpi-label{font-size:11.5px; color:var(--eq-text-soft); font-weight:600; text-transform:uppercase; letter-spacing:0.3px;}
   #mjDashboardRoot .eq-kpi-value{font-size:24px; font-weight:800; margin:5px 0 4px; color:var(--eq-navy);}
   #mjDashboardRoot .eq-kpi-compare{font-size:11.5px; color:var(--eq-text-soft); display:flex; align-items:center; gap:5px;}
@@ -1070,6 +1073,30 @@ function eqCountAppliedInRange(start, end){
   }).length;
 }
 
+let eqPaidDates = []; // raw date strings from MJ!AN (Paid Date basis)
+let eqPaidRows = [];  // full row detail (Student Name, Counselor Name, UNIVERSITY, Paid Date, PAID AMOUNT)
+
+async function eqLoadPaidData(){
+  if (SCRIPT_URL.includes('PASTE_YOUR')) return;
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=paid');
+    const json = await res.json();
+    if (json.status !== 'ok') throw new Error(json.message || 'bad response');
+    eqPaidDates = json.records || [];
+    eqPaidRows = json.rows || [];
+  } catch (err) {
+    eqPaidDates = [];
+    eqPaidRows = [];
+  }
+}
+
+function eqCountPaidInRange(start, end){
+  return eqPaidDates.filter(dateStr => {
+    const d = eqParseYMD(dateStr);
+    return d >= start && d <= end;
+  }).length;
+}
+
 let eqActivePeriod = 'currentMonth';
 let eqCustomStart = null, eqCustomEnd = null;
 let eqFilters = { course:'', type:'', state:'', counsellor:'', status:'', search:'' };
@@ -1132,7 +1159,7 @@ function eqPopulateSelect(id, items){
 }
 
 
-const EQ_CLICKABLE_KPI_KEYS = ['total', 'mbbs', 'nonmbbs', 'docrecv', 'docpend'];
+const EQ_CLICKABLE_KPI_KEYS = ['total', 'mbbs', 'nonmbbs', 'docrecv', 'docpend', 'paid'];
 
 const eqKpiDefs = [
   {key:'total', label:'Total Enquiries', cls:''},
@@ -1142,6 +1169,7 @@ const eqKpiDefs = [
   {key:'docpend', label:'Applied', cls:'docpend'},
   {key:'convmbbs', label:'MBBS Conversion %', cls:'convmbbs'},
   {key:'convnonmbbs', label:'Non-MBBS Conversion %', cls:'convnonmbbs'},
+  {key:'paid', label:'Paid', cls:'paid'},
 ];
 
 function eqComputeStats(rows){
@@ -1160,7 +1188,7 @@ function eqPctChange(cur, prev){
   return ((cur - prev) / prev) * 100;
 }
 
-function eqRenderKPIs(curRows, prevRows, docsCurCount, docsPrevCount, appliedCurCount, appliedPrevCount){
+function eqRenderKPIs(curRows, prevRows, docsCurCount, docsPrevCount, appliedCurCount, appliedPrevCount, paidCurCount, paidPrevCount){
   const cur = eqComputeStats(curRows);
   const prev = eqComputeStats(prevRows);
   // Documents Received now comes from MJ!AB:AD (Timestamp-based), not the status "dr" flag
@@ -1169,6 +1197,9 @@ function eqRenderKPIs(curRows, prevRows, docsCurCount, docsPrevCount, appliedCur
   // Applied (formerly Documents Pending) now comes from MJ!AF (Timestamp-based)
   cur.docpend = appliedCurCount;
   prev.docpend = appliedPrevCount;
+  // Paid comes from MJ!AK:AO, using AN (Paid Date) as the date basis
+  cur.paid = paidCurCount;
+  prev.paid = paidPrevCount;
   const grid = document.getElementById('eqKpiGrid');
   grid.innerHTML = '';
 
@@ -1335,6 +1366,23 @@ function eqOpenDetail(kpiKey){
     theadHtml = '<tr><th>S.No.</th>' + eqAppliedHeaders.map(h => `<th>${eqEscapeHtml_(h)}</th>`).join('') + '</tr>';
     bodyHtml = rows.map((r, i) => `
       <tr><td>${i + 1}</td>${r.values.map(v => `<td>${eqEscapeHtml_(v) || '-'}</td>`).join('')}</tr>
+    `).join('');
+
+  } else if (kpiKey === 'paid'){
+    const rows = eqPaidRows.filter(r => { const d = eqParseYMD(r.date); return d >= start && d <= end; });
+    title = 'Paid';
+    count = rows.length;
+
+    theadHtml = '<tr><th>S.No.</th><th>Student Name</th><th>Counselor Name</th><th>UNIVERSITY</th><th>Paid Date</th><th>PAID AMOUNT</th></tr>';
+    bodyHtml = rows.map((r, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${eqEscapeHtml_(r.studentName) || '-'}</td>
+        <td>${eqEscapeHtml_(r.counselorName) || '-'}</td>
+        <td>${eqEscapeHtml_(r.university) || '-'}</td>
+        <td>${r.paidDate}</td>
+        <td>${eqEscapeHtml_(r.paidAmount) || '-'}</td>
+      </tr>
     `).join('');
   } else {
     return; // not a clickable card
@@ -1549,11 +1597,13 @@ function eqRenderAll(){
   const docsPrevCount = eqCountDocsInRange(prevStart, prevEnd);
   const appliedCurCount = eqCountAppliedInRange(start, end);
   const appliedPrevCount = eqCountAppliedInRange(prevStart, prevEnd);
+  const paidCurCount = eqCountPaidInRange(start, end);
+  const paidPrevCount = eqCountPaidInRange(prevStart, prevEnd);
 
   // Each render step is isolated in its own try/catch so a canvas-sizing
   // error in one chart (e.g. right after switching a hidden view back to
   // visible) can never prevent the KPI cards or table from updating.
-  try { eqRenderKPIs(curRows, prevRows, docsCurCount, docsPrevCount, appliedCurCount, appliedPrevCount); } catch (err) {}
+  try { eqRenderKPIs(curRows, prevRows, docsCurCount, docsPrevCount, appliedCurCount, appliedPrevCount, paidCurCount, paidPrevCount); } catch (err) {}
   try { eqRenderDonutChart(curRows); } catch (err) {}
   try { eqRenderDetailedTable(); } catch (err) {}
 }
@@ -1606,7 +1656,7 @@ async function eqHandleRefresh(){
   const btn = document.getElementById('eqRefreshBtn');
   btn.classList.add('eq-spinning');
   eqEnsureMainView();
-  await Promise.all([eqLoadLiveData(), eqLoadDocumentsData(), eqLoadAppliedData()]);
+  await Promise.all([eqLoadLiveData(), eqLoadDocumentsData(), eqLoadAppliedData(), eqLoadPaidData()]);
   eqRenderAll();
   eqSafeRenderTrendChart();
   btn.classList.remove('eq-spinning');
@@ -1623,7 +1673,7 @@ document.getElementById('eqAutoRefreshToggle').addEventListener('change', (e) =>
 
 let eqInitialized = false;
 async function eqInitDashboard(){
-  await Promise.all([eqLoadLiveData(), eqLoadDocumentsData(), eqLoadAppliedData()]);
+  await Promise.all([eqLoadLiveData(), eqLoadDocumentsData(), eqLoadAppliedData(), eqLoadPaidData()]);
   eqRenderAll();
   eqSafeRenderTrendChart();
 }
