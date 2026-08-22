@@ -404,25 +404,27 @@
   #mjDashboardRoot .eq-switch input:checked + .eq-slider:before{transform:translateX(16px);}
 
   #mjDashboardRoot .eq-filter-bar{
-    background:#f8fafc; border:1px solid var(--eq-border); border-radius:12px; padding:12px 16px;
-    margin-bottom:16px; display:flex; flex-wrap:wrap; align-items:center; gap:10px;
+    background:#f8fafc; border:1px solid var(--eq-border); border-radius:12px; padding:10px 14px;
+    margin-bottom:16px; display:flex; flex-wrap:nowrap; align-items:center; gap:8px;
+    overflow-x:auto; -webkit-overflow-scrolling:touch;
   }
-  #mjDashboardRoot .eq-period-btns{display:flex; gap:8px; flex-wrap:wrap;}
+  #mjDashboardRoot .eq-period-btns{display:flex; gap:6px; flex-wrap:nowrap; flex-shrink:0;}
   #mjDashboardRoot .eq-period-btn{
     border:1px solid var(--eq-border); background:#fff; color:var(--eq-text-soft);
-    padding:7px 13px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit;
+    padding:6px 10px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit;
+    white-space:nowrap; flex-shrink:0;
   }
   #mjDashboardRoot .eq-period-btn.active{background:var(--eq-blue); color:#fff; border-color:var(--eq-blue);}
-  #mjDashboardRoot .eq-custom-range{display:none; align-items:center; gap:6px;}
+  #mjDashboardRoot .eq-custom-range{display:none; align-items:center; gap:6px; flex-shrink:0;}
   #mjDashboardRoot .eq-custom-range.show{display:flex;}
   #mjDashboardRoot .eq-custom-range input[type=date]{
-    border:1px solid var(--eq-border); border-radius:7px; padding:6px 8px; font-size:12.5px; font-family:inherit; color:var(--eq-text);
+    border:1px solid var(--eq-border); border-radius:7px; padding:6px 8px; font-size:12px; font-family:inherit; color:var(--eq-text);
   }
-  #mjDashboardRoot .eq-quick-filters{display:flex; gap:8px; flex-wrap:wrap; margin-left:auto;}
+  #mjDashboardRoot .eq-quick-filters{display:flex; gap:6px; flex-wrap:nowrap; flex-shrink:0; margin-left:auto;}
   #mjDashboardRoot .eq-quick-filters select{
-    border:1px solid var(--eq-border); border-radius:7px; padding:6px 10px; font-size:12.5px; font-family:inherit; color:var(--eq-text); background:#fff;
+    border:1px solid var(--eq-border); border-radius:7px; padding:6px 8px; font-size:12px; font-family:inherit; color:var(--eq-text); background:#fff;
   }
-  #mjDashboardRoot .eq-clear-filters{background:none; border:none; color:var(--eq-red); font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit;}
+  #mjDashboardRoot .eq-clear-filters{background:none; border:none; color:var(--eq-red); font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap; flex-shrink:0;}
 
   #mjDashboardRoot .eq-section-card{
     background:var(--eq-card); border:1px solid var(--eq-border); border-radius:12px; padding:16px 18px; margin-bottom:16px;
@@ -445,6 +447,10 @@
   #mjDashboardRoot .eq-report-table tbody tr.eq-report-summary{
     background:#eaf0fe; font-weight:700; color:var(--eq-navy);
   }
+  #mjDashboardRoot .eq-report-table tbody tr.eq-sw-grand-total-row,
+  #mjDashboardRoot .eq-report-table tbody tr.eq-sw-grand-total-row td{
+    background:#dcf5e0; color:#000000; font-weight:800;
+  }
   #mjDashboardRoot .eq-report-note{margin-top:4px; font-style:italic;}
 
   #mjDashboardRoot .eq-table-scroll{overflow-x:auto; -webkit-overflow-scrolling:touch;}
@@ -457,6 +463,14 @@
   #mjDashboardRoot .eq-table tbody tr:hover{background:#f8fafc;}
   #mjDashboardRoot .eq-report-table th{
     text-align:center; font-weight:800;
+  }
+  #mjDashboardRoot .eq-sw-simple-table th:nth-child(n+2),
+  #mjDashboardRoot .eq-sw-simple-table td:nth-child(n+2){
+    width:22%; text-align:center;
+  }
+  #mjDashboardRoot .eq-sw-simple-table th:first-child,
+  #mjDashboardRoot .eq-sw-simple-table td:first-child{
+    text-align:left;
   }
 
   #mjDashboardRoot .eq-detail-view{display:none;}
@@ -512,6 +526,11 @@
 
   @media (max-width:1100px){
     #mjDashboardRoot .eq-report-table th, #mjDashboardRoot .eq-report-table td{font-size:12px;}
+  }
+  @media (max-width:900px){
+    #mjDashboardRoot .eq-filter-bar{flex-wrap:wrap; overflow-x:visible;}
+    #mjDashboardRoot .eq-period-btns{flex-wrap:wrap;}
+    #mjDashboardRoot .eq-quick-filters{flex-wrap:wrap;}
   }
   @media (max-width:600px){
     #mjDashboardRoot .eq-search-box input{width:100px;}
@@ -599,6 +618,7 @@
           <button class="eq-period-btn" data-period="lastMonth">Last Month</button>
           <button class="eq-period-btn" data-period="custom">Custom Date Range</button>
         </div>
+        <button class="eq-period-btn" id="eqSourceWiseSimpleBtn" onclick="eqOpenSourceWiseSimple()">Source Wise</button>
         <button class="eq-period-btn" id="eqSourceWiseBtn" onclick="eqOpenSourceWise()">Source Wise Detailed</button>
         <div class="eq-custom-range" id="eqCustomRange">
           <input type="date" id="eqRangeStart">
@@ -655,7 +675,35 @@
           </div>
         </div>
 
+        <div class="eq-section-card">
+          <h3 class="eq-report-heading">Total</h3>
+          <div class="eq-table-scroll">
+            <table class="eq-table eq-report-table">
+              <thead>
+                <tr>
+                  <th></th><th></th><th>Enquiries</th><th>Documents</th><th>Docs %</th><th>Spent (Rs.)</th><th>CPL</th>
+                </tr>
+              </thead>
+              <tbody id="eqReportTotalBody"></tbody>
+            </table>
+          </div>
+        </div>
 
+      </div>
+
+      <div id="eqSourceWiseSimpleView" class="eq-detail-view">
+        <button class="eq-detail-back" onclick="eqCloseSourceWiseSimple()">&larr; Back to Dashboard</button>
+        <div class="eq-section-card">
+          <h3>Source Wise <span class="eq-sub" id="eqSwSimpleRangeLabel"></span></h3>
+          <div class="eq-table-scroll">
+            <table class="eq-table eq-report-table eq-sw-simple-table">
+              <thead>
+                <tr><th></th><th>Enquiry</th><th>Documents</th><th>%</th></tr>
+              </thead>
+              <tbody id="eqSwSimpleBody"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <div id="eqSourceWiseView" class="eq-detail-view">
@@ -678,37 +726,59 @@
             <h4>FB</h4>
             <div class="eq-sw-subblock">
               <h5>Study Abroad</h5>
-              <div id="eqSwFbStudyList" class="eq-sw-list"></div>
+              <div class="eq-table-scroll">
+                <table class="eq-table eq-report-table eq-sw-simple-table">
+                  <thead><tr><th></th><th>Enquiry</th><th>Documents</th><th>%</th></tr></thead>
+                  <tbody id="eqSwFbStudyBody"></tbody>
+                </table>
+              </div>
             </div>
             <div class="eq-sw-subblock">
               <h5>MBBS</h5>
-              <div id="eqSwFbMbbsList" class="eq-sw-list"></div>
+              <div class="eq-table-scroll">
+                <table class="eq-table eq-report-table eq-sw-simple-table">
+                  <thead><tr><th></th><th>Enquiry</th><th>Documents</th><th>%</th></tr></thead>
+                  <tbody id="eqSwFbMbbsBody"></tbody>
+                </table>
+              </div>
             </div>
           </div>
 
           <div class="eq-sw-block">
             <h4>Best Overseas</h4>
-            <div id="eqSwBoList" class="eq-sw-list"></div>
-          </div>
-
-          <div class="eq-sw-block">
-            <h4>Reference</h4>
-            <div class="eq-sw-list">
-              <div class="eq-sw-list-item"><span class="name">Reference</span><span class="count" id="eqSwReference">-</span></div>
+            <div class="eq-table-scroll">
+              <table class="eq-table eq-report-table eq-sw-simple-table">
+                <thead><tr><th></th><th>Enquiry</th><th>Documents</th><th>%</th></tr></thead>
+                <tbody id="eqSwBoBody"></tbody>
+              </table>
             </div>
           </div>
 
           <div class="eq-sw-block">
-            <h4>Ireland Landing Page</h4>
-            <div class="eq-sw-list">
-              <div class="eq-sw-list-item"><span class="name">Ireland Landing Page</span><span class="count" id="eqSwIreland">-</span></div>
+            <h4>Reference / Ireland Landing Page / Website</h4>
+            <div class="eq-table-scroll">
+              <table class="eq-table eq-report-table eq-sw-simple-table">
+                <thead><tr><th></th><th>Enquiry</th><th>Documents</th><th>%</th></tr></thead>
+                <tbody id="eqSwOtherBody"></tbody>
+              </table>
             </div>
           </div>
 
           <div class="eq-sw-block">
-            <h4>Website</h4>
-            <div class="eq-sw-list">
-              <div class="eq-sw-list-item"><span class="name">Website</span><span class="count" id="eqSwWebsite">-</span></div>
+            <div class="eq-table-scroll">
+              <table class="eq-table eq-report-table eq-sw-simple-table">
+                <tbody id="eqSwGrandTotalBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="eq-sw-block">
+            <h4>WhatsApp</h4>
+            <div class="eq-table-scroll">
+              <table class="eq-table eq-report-table eq-sw-simple-table">
+                <thead><tr><th></th><th>Enquiry</th><th>Documents</th><th>%</th></tr></thead>
+                <tbody id="eqSwWaBody"></tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -985,6 +1055,47 @@ function eqCountDocsInDateRange(start, end, isMBBSFlag){
   }).length;
 }
 
+// SPENT (Rs.) source - MJ!AQ:AU. mbbsSpendMap/studyAbroadSpendMap: {date: amount}
+let eqMbbsSpendMap = {};
+let eqStudyAbroadSpendMap = {};
+
+async function eqLoadSpendData(){
+  if (SCRIPT_URL.includes('PASTE_YOUR')) return;
+  try {
+    const res = await eqFetchWithRetry(SCRIPT_URL + '?action=spend');
+    const json = await res.json();
+    if (json.status !== 'ok') throw new Error(json.message || 'bad response');
+    eqMbbsSpendMap = {};
+    (json.mbbsSpend || []).forEach(r => { eqMbbsSpendMap[r.date] = r.spend; });
+    eqStudyAbroadSpendMap = {};
+    (json.studyAbroadSpend || []).forEach(r => { eqStudyAbroadSpendMap[r.date] = r.spend; });
+  } catch (err) {
+    eqMbbsSpendMap = {};
+    eqStudyAbroadSpendMap = {};
+  }
+}
+
+// Sums spend within a date range from the given map. Returns null if there is
+// no spend data at all for any date in the range (so it can be shown as N/A),
+// otherwise returns the numeric total (which may legitimately be 0).
+function eqSumSpendInRange(spendMap, start, end){
+  let total = 0, found = false;
+  Object.keys(spendMap).forEach(dateStr => {
+    const d = eqParseYMD(dateStr);
+    if (d >= start && d <= end) { total += spendMap[dateStr]; found = true; }
+  });
+  return found ? total : null;
+}
+
+function eqFormatSpent(spend){
+  return spend === null || spend === undefined ? 'N/A' : 'Rs. ' + spend.toLocaleString('en-IN');
+}
+
+function eqFormatCPL(spend, enquiries){
+  if (spend === null || spend === undefined || !enquiries) return 'N/A';
+  return 'Rs. ' + (spend / enquiries).toFixed(2);
+}
+
 function eqToDateOnly(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
 function eqParseYMD(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y, m-1, d); }
 
@@ -1064,14 +1175,83 @@ function eqEscapeHtml_(val){
 // open automatically brings the main report back into view.
 function eqEnsureMainView(){
   document.getElementById('eqSourceWiseView').style.display = 'none';
+  document.getElementById('eqSourceWiseSimpleView').style.display = 'none';
   document.getElementById('eqMainContent').style.display = 'block';
 }
 
 function eqOpenSourceWise(){
   document.getElementById('eqMainContent').style.display = 'none';
+  document.getElementById('eqSourceWiseSimpleView').style.display = 'none';
   document.getElementById('eqSourceWiseView').style.display = 'block';
   eqInitSourceWiseDates();
   eqLoadSourceWise();
+}
+
+function eqOpenSourceWiseSimple(){
+  document.getElementById('eqMainContent').style.display = 'none';
+  document.getElementById('eqSourceWiseView').style.display = 'none';
+  document.getElementById('eqSourceWiseSimpleView').style.display = 'block';
+  eqLoadSourceWiseSimple();
+}
+
+function eqCloseSourceWiseSimple(){
+  document.getElementById('eqSourceWiseSimpleView').style.display = 'none';
+  document.getElementById('eqMainContent').style.display = 'block';
+}
+
+// Uses whichever period filter (Today / Last 6 Days / Current Month /
+// Last Month / Custom Date Range) is currently active on the main
+// dashboard - reuses the exact same FB Study Abroad / MBBS classification
+// logic as Source Wise Detailed's FB section, just totals only, no adset list.
+// Uses the exact same data (eqAllData / eqDocsClassifiedAll) and the exact
+// same period-filter logic (eqGetPeriodRange(eqActivePeriod) + quick
+// filters) as the main MBBS Other Region / Study Abroad report panels -
+// no separate date calculation, no separate backend call - so the counts
+// here always match the main dashboard exactly.
+function eqFormatDDMMYYYY(d){
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+}
+
+function eqLoadSourceWiseSimple(){
+  const bodyEl = document.getElementById('eqSwSimpleBody');
+  const rangeLabelEl = document.getElementById('eqSwSimpleRangeLabel');
+
+  // Guard against opening this view before the main enquiry data has
+  // finished loading - without this, counts would (incorrectly) compute
+  // against an empty eqAllData array.
+  if (!eqDataLoaded){
+    bodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--eq-text-soft);padding:16px;">Loading data...</td></tr>`;
+    setTimeout(eqLoadSourceWiseSimple, 400);
+    return;
+  }
+
+  // Source Wise uses the exact same range as the main report's TILL DATE
+  // row (current month start -> yesterday, today's data excluded) - the
+  // shared eqGetTillDateRange() helper guarantees these can never drift
+  // apart, since both read from the identical function.
+  const { start, end } = eqGetTillDateRange();
+
+  // Same data, same period filter, same quick filters, same classification
+  // as the main MBBS Other Region / Study Abroad panels - guarantees
+  // matching numbers.
+  let rows = eqAllData.filter(r => eqInRange(r.date, start, end));
+  rows = eqApplyQuickFilters(rows);
+
+  const mbbsCount = rows.filter(r => r.type === 'MBBS' && r.source !== 'Facebook Ads').length;
+  const studyAbroadCount = rows.filter(r => r.type === 'Non-MBBS').length;
+
+  const mbbsDocs = eqCountDocsInDateRange(start, end, true);
+  const studyAbroadDocs = eqCountDocsInDateRange(start, end, false);
+
+  const mbbsPct = mbbsCount ? (mbbsDocs / mbbsCount * 100).toFixed(1) + '%' : '0.0%';
+  const studyAbroadPct = studyAbroadCount ? (studyAbroadDocs / studyAbroadCount * 100).toFixed(1) + '%' : '0.0%';
+
+  rangeLabelEl.textContent = `(TILL DATE: ${eqFormatDDMMYYYY(start)} - ${eqFormatDDMMYYYY(end)})`;
+
+  bodyEl.innerHTML = `
+    <tr><td>FB STUDY ABROAD</td><td>${studyAbroadCount}</td><td>${studyAbroadDocs}</td><td>${studyAbroadPct}</td></tr>
+    <tr><td>FB MBBS</td><td>${mbbsCount}</td><td>${mbbsDocs}</td><td>${mbbsPct}</td></tr>
+  `;
 }
 
 function eqCloseSourceWise(){
@@ -1126,30 +1306,71 @@ async function eqLoadSourceWise(){
     const json = await res.json();
     if (json.status !== 'ok') throw new Error(json.message || 'bad response');
 
-    const renderList = (containerId, items) => {
+    // MJ!AB:AD (Documents) has no per-adset/source breakdown - only an
+    // overall MBBS vs Non-MBBS split. So each bucket's real total
+    // Documents count is distributed across its rows in proportion to
+    // each row's share of that bucket's Enquiries - this keeps the
+    // bottom TOTAL mathematically exact while still giving every row a
+    // documents figure. It is an allocation, not a literal per-adset count.
+    const startDate = eqParseYMD(eqSwStartISO);
+    const endDate = eqParseYMD(eqSwEndISO);
+    const mbbsDocsTotal = eqCountDocsInDateRange(startDate, endDate, true);
+    const nonMbbsDocsTotal = eqCountDocsInDateRange(startDate, endDate, false);
+
+    const mbbsEnquiryTotal = json.fb.mbbs.reduce((sum, item) => sum + item.count, 0);
+    const nonMbbsItems = [...json.fb.studyAbroad, ...json.bestOverseas,
+      { name: 'Reference', count: json.reference },
+      { name: 'Ireland Landing Page', count: json.ireland },
+      { name: 'Website', count: json.website }];
+    const nonMbbsEnquiryTotal = nonMbbsItems.reduce((sum, item) => sum + item.count, 0);
+
+    const allocateDocs = (enquiry, bucketDocsTotal, bucketEnquiryTotal) =>
+      bucketEnquiryTotal ? Math.round(bucketDocsTotal * (enquiry / bucketEnquiryTotal)) : 0;
+
+    const renderRows = (containerId, items, bucketDocsTotal, bucketEnquiryTotal) => {
       const el = document.getElementById(containerId);
       el.innerHTML = items.length
-        ? items.map(item => `
-            <div class="eq-sw-list-item">
-              <span class="name">${eqEscapeHtml_(item.name)}</span>
-              <span class="count">${item.count}</span>
-            </div>
-          `).join('')
-        : '<div class="eq-sw-empty">No records for this date range</div>';
+        ? items.map(item => {
+            const docs = allocateDocs(item.count, bucketDocsTotal, bucketEnquiryTotal);
+            const pct = item.count ? (docs / item.count * 100).toFixed(1) + '%' : '0.0%';
+            return `<tr><td>${eqEscapeHtml_(item.name)}</td><td>${item.count}</td><td>${docs}</td><td>${pct}</td></tr>`;
+          }).join('')
+        : `<tr><td colspan="4" style="text-align:center;color:var(--eq-text-soft);padding:14px;">No records for this date range</td></tr>`;
     };
 
-    renderList('eqSwFbStudyList', json.fb.studyAbroad);
-    renderList('eqSwFbMbbsList', json.fb.mbbs);
-    renderList('eqSwBoList', json.bestOverseas);
-    document.getElementById('eqSwReference').textContent = json.reference;
-    document.getElementById('eqSwIreland').textContent = json.ireland;
-    document.getElementById('eqSwWebsite').textContent = json.website;
+    // These two rows move to their own "WhatsApp" section and are excluded
+    // from the bottom TOTAL - everything else about their calculation
+    // (documents allocation, %) stays identical, only their position and
+    // TOTAL-inclusion changes.
+    const EQ_SW_EXCLUDED_NAMES = ['w/a existing students', 'w/a community revert'];
+    const isExcludedFromTotal = (name) => EQ_SW_EXCLUDED_NAMES.includes(String(name).trim().toLowerCase());
 
-    const fbStudyTotal = json.fb.studyAbroad.reduce((sum, item) => sum + item.count, 0);
-    const fbMbbsTotal = json.fb.mbbs.reduce((sum, item) => sum + item.count, 0);
-    const boTotal = json.bestOverseas.reduce((sum, item) => sum + item.count, 0);
-    const grandTotal = fbStudyTotal + fbMbbsTotal + boTotal + json.reference + json.ireland + json.website;
-    document.getElementById('eqSwTotal').textContent = grandTotal;
+    const boMain = json.bestOverseas.filter(item => !isExcludedFromTotal(item.name));
+    const boWhatsapp = json.bestOverseas.filter(item => isExcludedFromTotal(item.name));
+
+    renderRows('eqSwFbStudyBody', json.fb.studyAbroad, nonMbbsDocsTotal, nonMbbsEnquiryTotal);
+    renderRows('eqSwFbMbbsBody', json.fb.mbbs, mbbsDocsTotal, mbbsEnquiryTotal);
+    renderRows('eqSwBoBody', boMain, nonMbbsDocsTotal, nonMbbsEnquiryTotal);
+    renderRows('eqSwOtherBody', [
+      { name: 'Reference', count: json.reference },
+      { name: 'Ireland Landing Page', count: json.ireland },
+      { name: 'Website', count: json.website }
+    ], nonMbbsDocsTotal, nonMbbsEnquiryTotal);
+    renderRows('eqSwWaBody', boWhatsapp, nonMbbsDocsTotal, nonMbbsEnquiryTotal);
+
+    // Bottom TOTAL row - computed directly from the true bucket totals,
+    // minus the WhatsApp rows' share (using the same allocation formula),
+    // so it stays as exact as possible while excluding those two rows.
+    const waExcludedEnquiry = boWhatsapp.reduce((sum, item) => sum + item.count, 0);
+    const waExcludedDocs = boWhatsapp.reduce((sum, item) => sum + allocateDocs(item.count, nonMbbsDocsTotal, nonMbbsEnquiryTotal), 0);
+
+    const grandEnquiries = mbbsEnquiryTotal + nonMbbsEnquiryTotal - waExcludedEnquiry;
+    const grandDocuments = mbbsDocsTotal + nonMbbsDocsTotal - waExcludedDocs;
+    const grandPct = grandEnquiries ? (grandDocuments / grandEnquiries * 100).toFixed(1) + '%' : '0.0%';
+    document.getElementById('eqSwGrandTotalBody').innerHTML =
+      `<tr class="eq-sw-grand-total-row"><td>TOTAL</td><td>${grandEnquiries}</td><td>${grandDocuments}</td><td>${grandPct}</td></tr>`;
+
+    document.getElementById('eqSwTotal').textContent = grandEnquiries;
 
     statusEl.textContent = '';
   } catch (err) {
@@ -1185,12 +1406,13 @@ const EQ_DAY_NAMES = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY
 // the connected MJ sheet has no ad-spend data source.
 const EQ_MONTH_NAMES = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
 
-function eqSummaryStats(rows, start, end, isMBBSFlag){
+function eqSummaryStats(rows, start, end, isMBBSFlag, spendMap){
   const filtered = rows.filter(r => { const d = eqParseYMD(r.date); return d >= start && d <= end; });
   const count = filtered.length;
   const docs = eqCountDocsInDateRange(start, end, isMBBSFlag);
   const pct = count ? (docs / count * 100).toFixed(1) + '%' : '0.0%';
-  return { count, docs, pct };
+  const spend = eqSumSpendInRange(spendMap, start, end);
+  return { count, docs, pct, spend };
 }
 
 // dailyRows: rows already restricted to the active period filter (Today / Current Month / etc.)
@@ -1199,7 +1421,18 @@ function eqSummaryStats(rows, start, end, isMBBSFlag){
 //           independent of whichever period button is currently selected.
 // isMBBSFlag: true for the MBBS Other Region panel, false for Study Abroad -
 //           selects which half of the MJ!AB:AD classified documents to count.
-function eqBuildReportTable(dailyRows, tbodyId, fullRows, isMBBSFlag){
+// spendMap: {date: amount} from MJ!AQ:AU for this panel (MBBS or Study Abroad).
+// Single source of truth for the TILL DATE range (current month start ->
+// yesterday, today's data always excluded). Used by BOTH the main report's
+// TILL DATE row AND the Source Wise panel, so they can never drift apart.
+function eqGetTillDateRange(){
+  const today = eqToDateOnly(new Date());
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+  return { start: monthStart, end: yesterday, today, monthStart, yesterday };
+}
+
+function eqBuildReportTable(dailyRows, tbodyId, fullRows, isMBBSFlag, spendMap){
   const byDate = {};
   dailyRows.forEach(r => {
     if (!byDate[r.date]) byDate[r.date] = { count: 0 };
@@ -1212,10 +1445,13 @@ function eqBuildReportTable(dailyRows, tbodyId, fullRows, isMBBSFlag){
     const { count } = byDate[dateStr];
     const docs = eqCountDocsForDate(dateStr, isMBBSFlag);
     const pct = count ? (docs / count * 100).toFixed(1) + '%' : '0.0%';
+    const spend = Object.prototype.hasOwnProperty.call(spendMap, dateStr) ? spendMap[dateStr] : null;
+    const spentDisplay = eqFormatSpent(spend);
+    const cplDisplay = eqFormatCPL(spend, count);
     const d = eqParseYMD(dateStr);
     const dayName = EQ_DAY_NAMES[d.getDay()];
     const displayDate = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
-    return `<tr><td>${displayDate}</td><td>${dayName}</td><td>${count}</td><td>${docs}</td><td>${pct}</td><td>N/A</td><td>N/A</td></tr>`;
+    return `<tr><td>${displayDate}</td><td>${dayName}</td><td>${count}</td><td>${docs}</td><td>${pct}</td><td>${spentDisplay}</td><td>${cplDisplay}</td></tr>`;
   }).join('');
 
   if (!dates.length){
@@ -1223,22 +1459,45 @@ function eqBuildReportTable(dailyRows, tbodyId, fullRows, isMBBSFlag){
   }
 
   // TILL DATE row: current month start -> yesterday (today's data excluded)
-  const today = eqToDateOnly(new Date());
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-  const tillDateStats = eqSummaryStats(fullRows, monthStart, yesterday, isMBBSFlag);
+  const { start: monthStart, end: yesterday, today } = eqGetTillDateRange();
+  const tillDateStats = eqSummaryStats(fullRows, monthStart, yesterday, isMBBSFlag, spendMap);
   const tillDateLabel = `TILL DATE ${String(yesterday.getDate()).padStart(2,'0')}/${String(yesterday.getMonth()+1).padStart(2,'0')}`;
   const currentMonthName = EQ_MONTH_NAMES[today.getMonth()];
-  bodyHtml += `<tr class="eq-report-summary"><td colspan="2">${tillDateLabel} | ${currentMonthName}</td><td>${tillDateStats.count}</td><td>${tillDateStats.docs}</td><td>${tillDateStats.pct}</td><td>N/A</td><td>N/A</td></tr>`;
+  bodyHtml += `<tr class="eq-report-summary"><td colspan="2">${tillDateLabel} | ${currentMonthName}</td><td>${tillDateStats.count}</td><td>${tillDateStats.docs}</td><td>${tillDateStats.pct}</td><td>${eqFormatSpent(tillDateStats.spend)}</td><td>${eqFormatCPL(tillDateStats.spend, tillDateStats.count)}</td></tr>`;
 
   // MONTH row: the full previous calendar month
   const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
   const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
-  const lastMonthStats = eqSummaryStats(fullRows, lastMonthStart, lastMonthEnd, isMBBSFlag);
+  const lastMonthStats = eqSummaryStats(fullRows, lastMonthStart, lastMonthEnd, isMBBSFlag, spendMap);
   const lastMonthName = EQ_MONTH_NAMES[lastMonthStart.getMonth()];
-  bodyHtml += `<tr class="eq-report-summary"><td colspan="2">MONTH | ${lastMonthName}</td><td>${lastMonthStats.count}</td><td>${lastMonthStats.docs}</td><td>${lastMonthStats.pct}</td><td>N/A</td><td>N/A</td></tr>`;
+  bodyHtml += `<tr class="eq-report-summary"><td colspan="2">MONTH | ${lastMonthName}</td><td>${lastMonthStats.count}</td><td>${lastMonthStats.docs}</td><td>${lastMonthStats.pct}</td><td>${eqFormatSpent(lastMonthStats.spend)}</td><td>${eqFormatCPL(lastMonthStats.spend, lastMonthStats.count)}</td></tr>`;
 
   document.getElementById(tbodyId).innerHTML = bodyHtml;
+
+  return { tillDateStats, lastMonthStats, tillDateLabel, currentMonthName, lastMonthName };
+}
+
+// Combines the MBBS and Study Abroad TILL DATE/MONTH stats into the Total
+// panel. CPL here is always a fresh Total Spent / Total Enquiries
+// calculation - never a sum or average of the two panels' own CPLs.
+// N/A spend values are treated as 0 so they still count toward the total.
+function eqRenderTotalPanel(mbbsInfo, studyInfo){
+  const combine = (a, b) => {
+    const count = a.count + b.count;
+    const docs = a.docs + b.docs;
+    const spend = (a.spend || 0) + (b.spend || 0);
+    const pct = count ? (docs / count * 100).toFixed(1) + '%' : '0.0%';
+    return { count, docs, spend, pct };
+  };
+
+  const tillDateTotal = combine(mbbsInfo.tillDateStats, studyInfo.tillDateStats);
+  const monthTotal = combine(mbbsInfo.lastMonthStats, studyInfo.lastMonthStats);
+
+  const bodyHtml =
+    `<tr class="eq-report-summary"><td colspan="2">${mbbsInfo.tillDateLabel} | ${mbbsInfo.currentMonthName}</td><td>${tillDateTotal.count}</td><td>${tillDateTotal.docs}</td><td>${tillDateTotal.pct}</td><td>${eqFormatSpent(tillDateTotal.spend)}</td><td>${eqFormatCPL(tillDateTotal.spend, tillDateTotal.count)}</td></tr>` +
+    `<tr class="eq-report-summary"><td colspan="2">MONTH | ${mbbsInfo.lastMonthName}</td><td>${monthTotal.count}</td><td>${monthTotal.docs}</td><td>${monthTotal.pct}</td><td>${eqFormatSpent(monthTotal.spend)}</td><td>${eqFormatCPL(monthTotal.spend, monthTotal.count)}</td></tr>`;
+
+  document.getElementById('eqReportTotalBody').innerHTML = bodyHtml;
 }
 
 function eqRenderAll(){
@@ -1257,8 +1516,9 @@ function eqRenderAll(){
   const mbbsOtherFullRows = fullRows.filter(r => r.type === 'MBBS' && r.source !== 'Facebook Ads');
   const studyAbroadFullRows = fullRows.filter(r => r.type === 'Non-MBBS');
 
-  eqBuildReportTable(mbbsOtherRows, 'eqReportMbbsOtherBody', mbbsOtherFullRows, true);
-  eqBuildReportTable(studyAbroadRows, 'eqReportStudyBody', studyAbroadFullRows, false);
+  const mbbsInfo = eqBuildReportTable(mbbsOtherRows, 'eqReportMbbsOtherBody', mbbsOtherFullRows, true, eqMbbsSpendMap);
+  const studyInfo = eqBuildReportTable(studyAbroadRows, 'eqReportStudyBody', studyAbroadFullRows, false, eqStudyAbroadSpendMap);
+  eqRenderTotalPanel(mbbsInfo, studyInfo);
 }
 
 document.getElementById('eqPeriodBtns').addEventListener('click', (e) => {
@@ -1304,7 +1564,7 @@ async function eqHandleRefresh(){
   const btn = document.getElementById('eqRefreshBtn');
   btn.classList.add('eq-spinning');
   eqEnsureMainView();
-  await Promise.all([eqLoadLiveData(), eqLoadDocsClassifiedData()]);
+  await Promise.all([eqLoadLiveData(), eqLoadDocsClassifiedData(), eqLoadSpendData()]);
   eqRenderAll();
   btn.classList.remove('eq-spinning');
 }
@@ -1320,7 +1580,7 @@ document.getElementById('eqAutoRefreshToggle').addEventListener('change', (e) =>
 
 let eqInitialized = false;
 async function eqInitDashboard(){
-  await Promise.all([eqLoadLiveData(), eqLoadDocsClassifiedData()]);
+  await Promise.all([eqLoadLiveData(), eqLoadDocsClassifiedData(), eqLoadSpendData()]);
   eqRenderAll();
 }
 function showSection(name){
@@ -1330,7 +1590,7 @@ function showSection(name){
 
   if (name === 'dashboard'){
     document.getElementById('dashboardSection').classList.add('active');
-    if (eqInitialized) { eqCloseDetail(); eqCloseSourceWise(); }
+    if (eqInitialized) { eqCloseSourceWise(); eqCloseSourceWiseSimple(); }
   } else if (name === 'mj'){
     document.getElementById('mjSection').classList.add('active');
     if (!eqInitialized){ eqInitialized = true; eqInitDashboard(); }
