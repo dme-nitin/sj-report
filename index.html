@@ -176,6 +176,47 @@
   }
   .back-btn:hover{text-decoration:underline;}
 
+  .sj-subview{display:none;}
+  .sj-subview.active{display:block;}
+
+  /* Doer Breakup has many status columns, so it breaks out of the normal
+     1300px content width to use most of the browser width - this is what
+     fixes the cramped/wrapped header row. */
+  #sjDoerBreakupView.active{
+    width:96vw;
+    position:relative;
+    left:50%;
+    transform:translateX(-50%);
+    box-sizing:border-box;
+    padding:0 10px;
+  }
+
+  .sj-subnav-cards{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:14px;
+    max-width:420px;
+    margin:0 auto;
+  }
+  .sj-subnav-card{
+    background:linear-gradient(135deg, #ffffff 0%, #f5f8fc 100%);
+    border:1px solid #e3e9f2;
+    border-radius:14px;
+    padding:20px;
+    text-align:center;
+    cursor:pointer;
+    font-size:18px;
+    font-weight:bold;
+    color:var(--text);
+    box-shadow:0 2px 8px rgba(31,78,120,0.06);
+    transition:box-shadow 0.2s ease, transform 0.2s ease;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .sj-subnav-card:hover{
+    box-shadow:0 6px 18px rgba(31,78,120,0.14);
+    transform:translateY(-2px);
+  }
+
   .placeholder-card{
     background:var(--card);
     border-radius:14px;
@@ -232,6 +273,10 @@
     padding:8px 10px;
     text-align:center;
     font-size:13px;
+  }
+  #doerBreakupTable th, #doerBreakupTable td{
+    text-align:center;
+    vertical-align:middle;
   }
   th.points-col{
     text-align:center;
@@ -786,35 +831,64 @@
     </div>
   </div>
 
-  <!-- ===== SJ SECTION (existing report, moved here) ===== -->
+  <!-- ===== SJ SECTION ===== -->
   <div class="section" id="sjSection">
     <button class="back-btn" onclick="showSection('dashboard')">&larr; Back to Dashboard</button>
 
-    <div class="report-card">
-      <div class="report-toolbar">
-        <h2>Daily Report</h2>
+    <div id="sjLandingView">
+      <div class="sj-subnav-cards">
+        <div class="sj-subnav-card" onclick="showSJView('dailyReport')">Daily Report</div>
+        <div class="sj-subnav-card" onclick="showSJView('doerBreakup')">Doer Breakup</div>
       </div>
+    </div>
 
-      <div class="table-scroll">
-        <table id="reportTable">
-          <thead>
-            <tr class="title-row">
-              <th class="points-col" rowspan="2">Points</th>
-              <th colspan="6">REPORT OF LAST DAY</th>
-              <th class="total-col" rowspan="2">TOTAL</th>
-            </tr>
-            <tr>
-              <th>MANJU</th>
-              <th>SONAM</th>
-              <th>MADHUSMITA</th>
-              <th>BEENA</th>
-              <th>BANGALORE DR</th>
-              <th>MBBS DOER</th>
-            </tr>
-          </thead>
-          <tbody id="reportBody">
-          </tbody>
-        </table>
+    <div id="sjDailyReportView" class="sj-subview">
+      <button class="back-btn" onclick="showSJView('landing')">&larr; Back</button>
+
+      <div class="report-card">
+        <div class="report-toolbar">
+          <h2>Daily Report</h2>
+        </div>
+
+        <div class="table-scroll">
+          <table id="reportTable">
+            <thead>
+              <tr class="title-row">
+                <th class="points-col" rowspan="2">Points</th>
+                <th colspan="6">REPORT OF LAST DAY</th>
+                <th class="total-col" rowspan="2">TOTAL</th>
+              </tr>
+              <tr>
+                <th>MANJU</th>
+                <th>SONAM</th>
+                <th>MADHUSMITA</th>
+                <th>BEENA</th>
+                <th>BANGALORE DR</th>
+                <th>MBBS DOER</th>
+              </tr>
+            </thead>
+            <tbody id="reportBody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="sjDoerBreakupView" class="sj-subview">
+      <button class="back-btn" onclick="showSJView('landing')">&larr; Back</button>
+
+      <div class="report-card">
+        <div class="report-toolbar">
+          <h2>Doer Breakup</h2>
+          <span id="doerBreakupStatus" class="sync-status"></span>
+        </div>
+
+        <div class="table-scroll">
+          <table id="doerBreakupTable">
+            <thead id="doerBreakupThead"></thead>
+            <tbody id="doerBreakupTbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -862,6 +936,7 @@ const reportBody = document.getElementById('reportBody');
 const statusEl = document.getElementById('syncStatus');
 const refreshBtn = document.getElementById('refreshBtn');
 let reportLoaded = false;
+let doerBreakupLoaded = false;
 
 points.forEach((point, rowIndex) => {
   const tr = document.createElement('tr');
@@ -933,6 +1008,60 @@ async function loadFromSheet(){
     setStatus('Could not load from sheet', 'error');
   } finally {
     refreshBtn.classList.remove('spinning');
+  }
+}
+
+/**
+ * DOER BREAKUP - dynamic Counsellor x Status pivot table, sourced from the
+ * same SJ Google Sheet, columns AW (Counsellor) and AX (Status). Unique
+ * counsellors become rows, unique statuses become columns, each cell is
+ * the count of records matching that counsellor+status pair. Fully
+ * dynamic - new counsellors or statuses in the sheet appear automatically.
+ */
+async function loadDoerBreakup(){
+  const statusEl = document.getElementById('doerBreakupStatus');
+  if (SCRIPT_URL.includes('PASTE_YOUR')) {
+    statusEl.textContent = 'Sheet not connected yet';
+    return;
+  }
+  try {
+    statusEl.textContent = 'Loading...';
+    const res = await eqFetchWithRetry(SCRIPT_URL + '?action=doerBreakup');
+    const json = await res.json();
+    if (json.status !== 'ok') throw new Error(json.message || 'bad response');
+
+    const allRecords = json.records || []; // [{counsellor, status}]
+
+    // These names should never appear as counsellors in this report
+    const EQ_EXCLUDED_COUNSELLORS = ['aditi', 'ankita', 'chandni', 'closed', 'priyanka', 'saloni - mumbai', 'uma'];
+    const records = allRecords.filter(r => !EQ_EXCLUDED_COUNSELLORS.includes(r.counsellor.trim().toLowerCase()));
+
+    const counsellors = [...new Set(records.map(r => r.counsellor))].sort();
+    const statuses = [...new Set(records.map(r => r.status))].sort();
+
+    // counts[counsellor][status] = number of matching records
+    const counts = {};
+    counsellors.forEach(c => { counts[c] = {}; statuses.forEach(s => counts[c][s] = 0); });
+    records.forEach(r => { counts[r.counsellor][r.status]++; });
+
+    const thead = document.getElementById('doerBreakupThead');
+    thead.innerHTML = `<tr><th class="points-col">Counsellor</th>${statuses.map(s => `<th>${s}</th>`).join('')}<th class="total-col">Total</th></tr>`;
+
+    const tbody = document.getElementById('doerBreakupTbody');
+    if (!counsellors.length){
+      tbody.innerHTML = `<tr><td colspan="${statuses.length + 2}" style="text-align:center;color:#5a7089;padding:20px;">No data found in AW:AX</td></tr>`;
+    } else {
+      tbody.innerHTML = counsellors.map(c => {
+        let rowTotal = 0;
+        const cells = statuses.map(s => { const v = counts[c][s]; rowTotal += v; return `<td>${v}</td>`; }).join('');
+        return `<tr><td class="points-col">${c}</td>${cells}<td class="total-cell">${rowTotal}</td></tr>`;
+      }).join('');
+    }
+
+    statusEl.textContent = `Connected - ${records.length} records`;
+    doerBreakupLoaded = true;
+  } catch (err) {
+    statusEl.textContent = 'Could not load Doer Breakup data';
   }
 }
 
@@ -1596,8 +1725,20 @@ function showSection(name){
     if (!eqInitialized){ eqInitialized = true; eqInitDashboard(); }
   } else if (name === 'sj'){
     document.getElementById('sjSection').classList.add('active');
-    if (!reportLoaded) loadFromSheet();
+    showSJView('landing');
   }
+}
+
+// Controls which sub-view is visible inside the SJ section: the landing
+// buttons ('landing'), the existing Daily Report ('dailyReport'), or the
+// new Doer Breakup report ('doerBreakup').
+function showSJView(view){
+  document.getElementById('sjLandingView').style.display = view === 'landing' ? 'block' : 'none';
+  document.getElementById('sjDailyReportView').classList.toggle('active', view === 'dailyReport');
+  document.getElementById('sjDoerBreakupView').classList.toggle('active', view === 'doerBreakup');
+
+  if (view === 'dailyReport' && !reportLoaded) loadFromSheet();
+  if (view === 'doerBreakup' && !doerBreakupLoaded) loadDoerBreakup();
 }
 </script>
 </body>
