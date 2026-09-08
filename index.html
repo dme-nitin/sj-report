@@ -468,6 +468,7 @@
   #mjDashboardRoot .eq-quick-filters{display:flex; gap:6px; flex-wrap:nowrap; flex-shrink:0; margin-left:auto;}
   #mjDashboardRoot .eq-quick-filters select{
     border:1px solid var(--eq-border); border-radius:7px; padding:6px 8px; font-size:12px; font-family:inherit; color:var(--eq-text); background:#fff;
+    flex-shrink:0; min-width:120px;
   }
   #mjDashboardRoot .eq-clear-filters{background:none; border:none; color:var(--eq-red); font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap; flex-shrink:0;}
 
@@ -488,6 +489,32 @@
   }
   #mjDashboardRoot .eq-report-heading{
     text-align:center; text-decoration:underline; font-weight:800;
+  }
+  #mjDashboardRoot .eq-old-data-as-on{
+    text-align:right; font-weight:700; font-size:13px; color:var(--eq-navy);
+    background:#f1f4f9; border-radius:8px; padding:8px 14px; margin-bottom:16px;
+  }
+  #mjDashboardRoot .eq-old-data-panel{
+    background:var(--eq-card); border:1px solid var(--eq-border); border-radius:12px;
+    padding:16px 18px; margin-bottom:20px;
+  }
+  #mjDashboardRoot .eq-old-data-panel h3{
+    margin:0 0 12px; font-size:15px; font-weight:700; color:var(--eq-navy);
+  }
+  #mjDashboardRoot .eq-old-data-table{width:100%; border-collapse:collapse; min-width:600px;}
+  #mjDashboardRoot .eq-old-data-table th{
+    text-align:center; padding:8px 10px; font-size:11.5px; text-transform:uppercase; letter-spacing:0.3px;
+    color:var(--eq-text-soft); font-weight:800; border-bottom:2px solid var(--eq-border); background:#f8fafc;
+  }
+  #mjDashboardRoot .eq-old-data-table td{
+    text-align:center; padding:7px 10px; font-size:12.5px; border-bottom:1px solid var(--eq-border); color:var(--eq-text);
+  }
+  #mjDashboardRoot .eq-old-data-table tbody tr:hover{background:#f8fafc;}
+  #mjDashboardRoot .eq-old-data-title-row{
+    padding:14px 10px; font-size:13px;
+  }
+  #mjDashboardRoot .eq-old-data-title-big{
+    font-size:130%; font-weight:800; display:inline-block;
   }
   #mjDashboardRoot .eq-report-table tbody tr.eq-report-summary{
     background:#eaf0fe; font-weight:700; color:var(--eq-navy);
@@ -665,6 +692,7 @@
         </div>
         <button class="eq-period-btn" id="eqSourceWiseSimpleBtn" onclick="eqOpenSourceWiseSimple()">Source Wise</button>
         <button class="eq-period-btn" id="eqSourceWiseBtn" onclick="eqOpenSourceWise()">Source Wise Detailed</button>
+        <button class="eq-period-btn" id="eqOldDataBtn" onclick="eqOpenOldData()">Old Data</button>
         <div class="eq-custom-range" id="eqCustomRange">
           <input type="date" id="eqRangeStart">
           <span>to</span>
@@ -827,6 +855,13 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <div id="eqOldDataView" class="eq-detail-view">
+        <button class="eq-detail-back" onclick="eqCloseOldData()">&larr; Back to Dashboard</button>
+        <span id="eqOldDataStatus" class="eq-sub" style="display:block;margin-bottom:8px;"></span>
+        <div id="eqOldDataAsOnLabel" class="eq-old-data-as-on"></div>
+        <div id="eqOldDataReportsContainer"></div>
       </div>
     </div>
   </div>
@@ -1305,12 +1340,14 @@ function eqEscapeHtml_(val){
 function eqEnsureMainView(){
   document.getElementById('eqSourceWiseView').style.display = 'none';
   document.getElementById('eqSourceWiseSimpleView').style.display = 'none';
+  document.getElementById('eqOldDataView').style.display = 'none';
   document.getElementById('eqMainContent').style.display = 'block';
 }
 
 function eqOpenSourceWise(){
   document.getElementById('eqMainContent').style.display = 'none';
   document.getElementById('eqSourceWiseSimpleView').style.display = 'none';
+  document.getElementById('eqOldDataView').style.display = 'none';
   document.getElementById('eqSourceWiseView').style.display = 'block';
   eqInitSourceWiseDates();
   eqLoadSourceWise();
@@ -1319,8 +1356,112 @@ function eqOpenSourceWise(){
 function eqOpenSourceWiseSimple(){
   document.getElementById('eqMainContent').style.display = 'none';
   document.getElementById('eqSourceWiseView').style.display = 'none';
+  document.getElementById('eqOldDataView').style.display = 'none';
   document.getElementById('eqSourceWiseSimpleView').style.display = 'block';
   eqLoadSourceWiseSimple();
+}
+
+function eqOpenOldData(){
+  document.getElementById('eqMainContent').style.display = 'none';
+  document.getElementById('eqSourceWiseView').style.display = 'none';
+  document.getElementById('eqSourceWiseSimpleView').style.display = 'none';
+  document.getElementById('eqOldDataView').style.display = 'block';
+  eqLoadOldData();
+}
+
+function eqCloseOldData(){
+  document.getElementById('eqOldDataView').style.display = 'none';
+  document.getElementById('eqMainContent').style.display = 'block';
+}
+
+let eqOldDataLoaded = false;
+
+// For the merged "REPORT-1 / MONTHLY FIGURES / (April to March)" title
+// cell: the first 2 lines get shown 30% bigger and bold; any line after
+// that (e.g. the "(April to March)" line) is left exactly as it was.
+function eqOldDataTitleHtml_(text){
+  const lines = String(text).split('\n');
+  return lines.map((line, i) => {
+    const escaped = eqEscapeHtml_(line);
+    return i < 2 ? `<span class="eq-old-data-title-big">${escaped}</span>` : escaped;
+  }).join('<br>');
+}
+
+// Merges any row where at least one cell starts with "(" into the row
+// directly above it (cell by cell, stacked with a line break). Applied
+// generically to every Old Data report - no per-report special-casing,
+// and never touches the header row (index 0).
+async function eqLoadOldData(){
+  const statusEl = document.getElementById('eqOldDataStatus');
+  const containerEl = document.getElementById('eqOldDataReportsContainer');
+  const asOnEl = document.getElementById('eqOldDataAsOnLabel');
+
+  if (SCRIPT_URL.includes('PASTE_YOUR')) {
+    statusEl.textContent = 'Sheet not connected yet';
+    return;
+  }
+  try {
+    statusEl.textContent = 'Loading...';
+    const res = await eqFetchWithRetry(SCRIPT_URL + '?action=oldData');
+    const json = await res.json();
+    if (json.status !== 'ok') throw new Error(json.message || 'bad response');
+
+    asOnEl.textContent = json.asOnLabel ? json.asOnLabel : '';
+    asOnEl.style.display = json.asOnLabel ? 'block' : 'none';
+
+    if (!json.reports.length){
+      const d = json.debug || {};
+      const sampleHtml = (d.sampleColors || []).map(s =>
+        `<tr><td>${s.row}</td><td>${s.hex}</td><td>${s.classified || '(not detected)'}</td></tr>`
+      ).join('') || '<tr><td colspan="3">No colored cells found in column A at all.</td></tr>';
+      containerEl.innerHTML = `
+        <div class="eq-old-data-panel">
+          <p class="eq-sub">No report blocks detected yet. Diagnostic info:</p>
+          <p class="eq-sub">Total rows scanned: ${d.totalRows || 0} | Yellow rows found: ${d.yellowRowCount || 0} | Green rows found: ${d.greenRowCount || 0}</p>
+          <p class="eq-sub">Sample of colored cells found in column A (up to 10):</p>
+          <table class="eq-old-data-table">
+            <thead><tr><th>Row</th><th>Hex Color</th><th>Classified As</th></tr></thead>
+            <tbody>${sampleHtml}</tbody>
+          </table>
+        </div>`;
+      statusEl.textContent = 'Connected - synced with sheet';
+      eqOldDataLoaded = true;
+      return;
+    }
+
+    containerEl.innerHTML = json.reports.map((report) => {
+      const rows = report.values || [];
+      if (!rows.length){
+        return `<div class="eq-old-data-panel"><p class="eq-sub">No data found in this range.</p></div>`;
+      }
+
+      const headerRow = rows[0];
+      const bodyRows = rows.slice(1);
+      const numCols = headerRow.length;
+
+      const headerFilled = headerRow.map((c, i) => ({ c, i })).filter(o => o.c && o.c.trim());
+      const theadHtml = (headerFilled.length === 1)
+        ? `<tr><th colspan="${numCols}" class="eq-old-data-title-row">${eqOldDataTitleHtml_(headerFilled[0].c)}</th></tr>`
+        : `<tr>${headerRow.map(h => `<th>${eqEscapeHtml_(h).replace(/\n/g, '<br>')}</th>`).join('')}</tr>`;
+      const tbodyHtml = bodyRows.map(row =>
+        `<tr>${row.map(cell => `<td>${eqEscapeHtml_(cell).replace(/\n/g, '<br>')}</td>`).join('')}</tr>`
+      ).join('');
+      return `
+        <div class="eq-old-data-panel">
+          <div class="eq-table-scroll">
+            <table class="eq-old-data-table">
+              <thead>${theadHtml}</thead>
+              <tbody>${tbodyHtml}</tbody>
+            </table>
+          </div>
+        </div>`;
+    }).join('');
+
+    statusEl.textContent = 'Connected - synced with sheet';
+    eqOldDataLoaded = true;
+  } catch (err) {
+    statusEl.textContent = 'Could not load Old Data reports';
+  }
 }
 
 function eqCloseSourceWiseSimple(){
@@ -1693,7 +1834,9 @@ async function eqHandleRefresh(){
   const btn = document.getElementById('eqRefreshBtn');
   btn.classList.add('eq-spinning');
   eqEnsureMainView();
-  await Promise.all([eqLoadLiveData(), eqLoadDocsClassifiedData(), eqLoadSpendData()]);
+  const fetches = [eqLoadLiveData(), eqLoadDocsClassifiedData(), eqLoadSpendData()];
+  if (eqOldDataLoaded) fetches.push(eqLoadOldData());
+  await Promise.all(fetches);
   eqRenderAll();
   btn.classList.remove('eq-spinning');
 }
@@ -1719,7 +1862,7 @@ function showSection(name){
 
   if (name === 'dashboard'){
     document.getElementById('dashboardSection').classList.add('active');
-    if (eqInitialized) { eqCloseSourceWise(); eqCloseSourceWiseSimple(); }
+    if (eqInitialized) { eqCloseSourceWise(); eqCloseSourceWiseSimple(); eqCloseOldData(); }
   } else if (name === 'mj'){
     document.getElementById('mjSection').classList.add('active');
     if (!eqInitialized){ eqInitialized = true; eqInitDashboard(); }
