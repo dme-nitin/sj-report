@@ -791,7 +791,7 @@
           <div class="eq-sw-daterange">
             <label>From <input type="text" id="eqSwStart" placeholder="DD/MM/YYYY" readonly></label>
             <label>To <input type="text" id="eqSwEnd" placeholder="DD/MM/YYYY" readonly></label>
-            <button class="eq-primary-btn" onclick="eqLoadSourceWise()">Apply</button>
+            <button class="eq-primary-btn" id="eqSwApplyBtn" onclick="eqLoadSourceWise()">Apply</button>
             <span id="eqSwStatus" class="eq-sub"></span>
           </div>
 
@@ -1025,7 +1025,7 @@ async function loadFromSheet(){
   try {
     refreshBtn.classList.add('spinning');
     setStatus('Loading from sheet...', 'saving');
-    const res = await eqFetchWithRetry(SCRIPT_URL);
+    const res = await eqFetchWithRetry(SCRIPT_URL + '?_=' + Date.now());
     const json = await res.json();
     if (json.status !== 'ok') throw new Error(json.message || 'bad response');
 
@@ -1061,7 +1061,7 @@ async function loadDoerBreakup(){
   }
   try {
     statusEl.textContent = 'Loading...';
-    const res = await eqFetchWithRetry(SCRIPT_URL + '?action=doerBreakup');
+    const res = await eqFetchWithRetry(SCRIPT_URL + '?action=doerBreakup&_=' + Date.now());
     const json = await res.json();
     if (json.status !== 'ok') throw new Error(json.message || 'bad response');
 
@@ -1157,7 +1157,7 @@ async function eqLoadLiveData(){
   }
   try {
     if (eqStatusEl) eqStatusEl.textContent = 'Loading live data from MJ sheet...';
-    const res = await eqFetchWithRetry(SCRIPT_URL + '?action=enquiries');
+    const res = await eqFetchWithRetry(SCRIPT_URL + '?action=enquiries&_=' + Date.now());
     const json = await res.json();
     if (json.status !== 'ok') throw new Error(json.message || 'bad response');
 
@@ -1198,7 +1198,7 @@ let eqDocsClassifiedAll = [];
 async function eqLoadDocsClassifiedData(){
   if (SCRIPT_URL.includes('PASTE_YOUR')) return;
   try {
-    const res = await eqFetchWithRetry(SCRIPT_URL + '?action=docsClassified');
+    const res = await eqFetchWithRetry(SCRIPT_URL + '?action=docsClassified&_=' + Date.now());
     const json = await res.json();
     if (json.status !== 'ok') throw new Error(json.message || 'bad response');
     eqDocsClassifiedAll = json.records || [];
@@ -1226,7 +1226,7 @@ let eqStudyAbroadSpendMap = {};
 async function eqLoadSpendData(){
   if (SCRIPT_URL.includes('PASTE_YOUR')) return;
   try {
-    const res = await eqFetchWithRetry(SCRIPT_URL + '?action=spend');
+    const res = await eqFetchWithRetry(SCRIPT_URL + '?action=spend&_=' + Date.now());
     const json = await res.json();
     if (json.status !== 'ok') throw new Error(json.message || 'bad response');
     eqMbbsSpendMap = {};
@@ -1402,7 +1402,7 @@ async function eqLoadOldData(){
   }
   try {
     statusEl.textContent = 'Loading...';
-    const res = await eqFetchWithRetry(SCRIPT_URL + '?action=oldData');
+    const res = await eqFetchWithRetry(SCRIPT_URL + '?action=oldData&_=' + Date.now());
     const json = await res.json();
     if (json.status !== 'ok') throw new Error(json.message || 'bad response');
 
@@ -1562,8 +1562,12 @@ function eqInitSourceWiseDates(){
   eqSwEndPicker.setDate(end, false);
 }
 
+let eqSwRequestId = 0;
+
 async function eqLoadSourceWise(){
   const statusEl = document.getElementById('eqSwStatus');
+  const applyBtn = document.getElementById('eqSwApplyBtn');
+  const myRequestId = ++eqSwRequestId;
 
   if (SCRIPT_URL.includes('PASTE_YOUR')) {
     statusEl.textContent = 'Sheet not connected yet';
@@ -1571,80 +1575,62 @@ async function eqLoadSourceWise(){
   }
   try {
     statusEl.textContent = 'Loading...';
-    const url = `${SCRIPT_URL}?action=sourcewise&start=${encodeURIComponent(eqSwStartISO)}&end=${encodeURIComponent(eqSwEndISO)}`;
+    if (applyBtn) applyBtn.disabled = true;
+    const url = `${SCRIPT_URL}?action=sourcewise&start=${encodeURIComponent(eqSwStartISO)}&end=${encodeURIComponent(eqSwEndISO)}&_=${Date.now()}`;
     const res = await eqFetchWithRetry(url);
     const json = await res.json();
+    // If another (newer) request has started since this one was sent
+    // (e.g. Apply clicked twice, or a date changed while a request was
+    // still in flight), silently drop this now-stale response instead of
+    // letting it overwrite the UI with out-of-date numbers.
+    if (myRequestId !== eqSwRequestId) return;
     if (json.status !== 'ok') throw new Error(json.message || 'bad response');
 
-    // MJ!AB:AD (Documents) has no per-adset/source breakdown - only an
-    // overall MBBS vs Non-MBBS split. So each bucket's real total
-    // Documents count is distributed across its rows in proportion to
-    // each row's share of that bucket's Enquiries - this keeps the
-    // bottom TOTAL mathematically exact while still giving every row a
-    // documents figure. It is an allocation, not a literal per-adset count.
-    const startDate = eqParseYMD(eqSwStartISO);
-    const endDate = eqParseYMD(eqSwEndISO);
-    const mbbsDocsTotal = eqCountDocsInDateRange(startDate, endDate, true);
-    const nonMbbsDocsTotal = eqCountDocsInDateRange(startDate, endDate, false);
-
-    const mbbsEnquiryTotal = json.fb.mbbs.reduce((sum, item) => sum + item.count, 0);
-    const nonMbbsItems = [...json.fb.studyAbroad, ...json.bestOverseas,
-      { name: 'Reference', count: json.reference },
-      { name: 'Ireland Landing Page', count: json.ireland },
-      { name: 'Website', count: json.website }];
-    const nonMbbsEnquiryTotal = nonMbbsItems.reduce((sum, item) => sum + item.count, 0);
-
-    const allocateDocs = (enquiry, bucketDocsTotal, bucketEnquiryTotal) =>
-      bucketEnquiryTotal ? Math.round(bucketDocsTotal * (enquiry / bucketEnquiryTotal)) : 0;
-
-    const renderRows = (containerId, items, bucketDocsTotal, bucketEnquiryTotal) => {
+    // Documents now come straight from the backend - each row's own status
+    // column (F/K/O/T/Z depending on section) checked for "DR"
+    // (case-insensitive). No estimation/allocation anymore.
+    const renderRows = (containerId, items) => {
       const el = document.getElementById(containerId);
       el.innerHTML = items.length
         ? items.map(item => {
-            const docs = allocateDocs(item.count, bucketDocsTotal, bucketEnquiryTotal);
-            const pct = item.count ? (docs / item.count * 100).toFixed(1) + '%' : '0.0%';
-            return `<tr><td>${eqEscapeHtml_(item.name)}</td><td>${item.count}</td><td>${docs}</td><td>${pct}</td></tr>`;
+            const pct = item.count ? (item.docs / item.count * 100).toFixed(1) + '%' : '0.0%';
+            return `<tr><td>${eqEscapeHtml_(item.name)}</td><td>${item.count}</td><td>${item.docs}</td><td>${pct}</td></tr>`;
           }).join('')
         : `<tr><td colspan="4" style="text-align:center;color:var(--eq-text-soft);padding:14px;">No records for this date range</td></tr>`;
     };
 
-    // These two rows move to their own "WhatsApp" section and are excluded
-    // from the bottom TOTAL - everything else about their calculation
-    // (documents allocation, %) stays identical, only their position and
-    // TOTAL-inclusion changes.
-    const EQ_SW_EXCLUDED_NAMES = ['w/a existing students', 'w/a community revert'];
-    const isExcludedFromTotal = (name) => EQ_SW_EXCLUDED_NAMES.includes(String(name).trim().toLowerCase());
-
-    const boMain = json.bestOverseas.filter(item => !isExcludedFromTotal(item.name));
-    const boWhatsapp = json.bestOverseas.filter(item => isExcludedFromTotal(item.name));
-
-    renderRows('eqSwFbStudyBody', json.fb.studyAbroad, nonMbbsDocsTotal, nonMbbsEnquiryTotal);
-    renderRows('eqSwFbMbbsBody', json.fb.mbbs, mbbsDocsTotal, mbbsEnquiryTotal);
-    renderRows('eqSwBoBody', boMain, nonMbbsDocsTotal, nonMbbsEnquiryTotal);
+    renderRows('eqSwFbStudyBody', json.fb.studyAbroad);
+    renderRows('eqSwFbMbbsBody', json.fb.mbbs);
+    renderRows('eqSwBoBody', json.bestOverseas);
     renderRows('eqSwOtherBody', [
-      { name: 'Reference', count: json.reference },
-      { name: 'Ireland Landing Page', count: json.ireland },
-      { name: 'Website', count: json.website }
-    ], nonMbbsDocsTotal, nonMbbsEnquiryTotal);
-    renderRows('eqSwWaBody', boWhatsapp, nonMbbsDocsTotal, nonMbbsEnquiryTotal);
+      { name: 'Reference', count: json.reference.count, docs: json.reference.docs },
+      { name: 'Ireland Landing Page', count: json.ireland.count, docs: json.ireland.docs },
+      { name: 'Website', count: json.website.count, docs: json.website.docs }
+    ]);
+    renderRows('eqSwWaBody', [json.whatsapp]);
 
-    // Bottom TOTAL row - computed directly from the true bucket totals,
-    // minus the WhatsApp rows' share (using the same allocation formula),
-    // so it stays as exact as possible while excluding those two rows.
-    const waExcludedEnquiry = boWhatsapp.reduce((sum, item) => sum + item.count, 0);
-    const waExcludedDocs = boWhatsapp.reduce((sum, item) => sum + allocateDocs(item.count, nonMbbsDocsTotal, nonMbbsEnquiryTotal), 0);
+    // Bottom TOTAL row - straight sum of every category shown above
+    // (WhatsApp excluded, as before). % is a fresh Total Docs / Total
+    // Enquiries calculation, never a sum/average of the individual %s.
+    const fbStudyTotal = json.fb.studyAbroad.reduce((s, i) => ({ count: s.count + i.count, docs: s.docs + i.docs }), { count: 0, docs: 0 });
+    const fbMbbsTotal = json.fb.mbbs.reduce((s, i) => ({ count: s.count + i.count, docs: s.docs + i.docs }), { count: 0, docs: 0 });
+    const boTotal = json.bestOverseas.reduce((s, i) => ({ count: s.count + i.count, docs: s.docs + i.docs }), { count: 0, docs: 0 });
 
-    const grandEnquiries = mbbsEnquiryTotal + nonMbbsEnquiryTotal - waExcludedEnquiry;
-    const grandDocuments = mbbsDocsTotal + nonMbbsDocsTotal - waExcludedDocs;
+    const grandEnquiries = fbStudyTotal.count + fbMbbsTotal.count + boTotal.count
+      + json.reference.count + json.ireland.count + json.website.count;
+    const grandDocuments = fbStudyTotal.docs + fbMbbsTotal.docs + boTotal.docs
+      + json.reference.docs + json.ireland.docs + json.website.docs;
     const grandPct = grandEnquiries ? (grandDocuments / grandEnquiries * 100).toFixed(1) + '%' : '0.0%';
     document.getElementById('eqSwGrandTotalBody').innerHTML =
       `<tr class="eq-sw-grand-total-row"><td>TOTAL</td><td>${grandEnquiries}</td><td>${grandDocuments}</td><td>${grandPct}</td></tr>`;
 
     document.getElementById('eqSwTotal').textContent = grandEnquiries;
 
-    statusEl.textContent = '';
+    statusEl.textContent = `Loaded for: ${eqSwStartISO} to ${eqSwEndISO}`;
   } catch (err) {
-    statusEl.textContent = 'Could not load Source Wise data';
+    if (myRequestId === eqSwRequestId) statusEl.textContent = 'Could not load Source Wise data';
+  } finally {
+    if (myRequestId === eqSwRequestId && applyBtn) applyBtn.disabled = false;
   }
 }
 
