@@ -501,6 +501,17 @@
   #mjDashboardRoot .eq-old-data-panel h3{
     margin:0 0 12px; font-size:15px; font-weight:700; color:var(--eq-navy);
   }
+  #mjDashboardRoot .eq-amit-heading-row{
+    position:relative; display:flex; align-items:center; justify-content:center; margin-bottom:12px;
+  }
+  #mjDashboardRoot .eq-amit-heading-row h3{ margin:0; }
+  #mjDashboardRoot .eq-print-icon-btn{
+    position:absolute; right:0; top:50%; transform:translateY(-50%);
+    background:#fff; border:1.5px solid var(--eq-navy); border-radius:8px;
+    width:32px; height:32px; display:flex; align-items:center; justify-content:center;
+    color:var(--eq-navy); cursor:pointer; padding:0;
+  }
+  #mjDashboardRoot .eq-print-icon-btn:hover{ background:#f1f4f9; }
   #mjDashboardRoot .eq-old-data-table{width:100%; border-collapse:collapse; min-width:600px;}
   #mjDashboardRoot .eq-old-data-table th{
     text-align:center; padding:8px 10px; font-size:11.5px; text-transform:uppercase; letter-spacing:0.3px;
@@ -510,6 +521,17 @@
     text-align:center; padding:7px 10px; font-size:12.5px; border-bottom:1px solid var(--eq-border); color:var(--eq-text);
   }
   #mjDashboardRoot .eq-old-data-table tbody tr:hover{background:#f8fafc;}
+  #mjDashboardRoot .eq-amit-table td:nth-child(2){text-align:left; font-weight:600;}
+  #mjDashboardRoot .eq-amit-table td:first-child{width:40px;}
+  #mjDashboardRoot .eq-amit-table input{
+    width:100%; border:1px solid var(--eq-border); border-radius:6px; padding:5px 6px;
+    font-size:12.5px; font-family:inherit; color:var(--eq-text); text-align:center; background:#fff;
+    box-sizing:border-box;
+  }
+  #mjDashboardRoot .eq-amit-table input:focus{outline:2px solid var(--eq-blue); outline-offset:-1px;}
+  #mjDashboardRoot .eq-amit-live-cell{
+    background:#eaf0fe; font-weight:700; color:var(--eq-navy);
+  }
   #mjDashboardRoot .eq-old-data-subheader-row,
   #mjDashboardRoot .eq-old-data-subheader-row td{
     background:#ffe066; color:#000000; font-weight:700;
@@ -617,6 +639,18 @@
     #mjDashboardRoot .eq-quick-filters{margin-left:0; width:100%;}
     #mjDashboardRoot .eq-quick-filters select{flex:1; min-width:105px;}
   }
+  #eqPrintArea{display:none;}
+  @media print {
+    @page { size: A4; margin: 12mm; }
+    body.eq-printing-mode > *:not(#eqPrintArea){ display:none !important; }
+    body.eq-printing-mode #eqPrintArea{ display:block !important; }
+    #eqPrintArea h2{ font-size:15px; margin:0 0 10px; text-align:center; }
+    #eqPrintArea table{ width:100%; border-collapse:collapse; }
+    #eqPrintArea th, #eqPrintArea td{ border:1px solid #000; padding:5px 6px; font-size:9.5px; text-align:center; }
+    #eqPrintArea input{ border:none; width:100%; text-align:center; font-size:9.5px; font-family:inherit; }
+    #eqPrintArea .eq-print-section-gap{ height:20px; page-break-inside:avoid; }
+    #eqPrintArea table{ page-break-inside:avoid; }
+  }
 </style>
 </head>
 <body>
@@ -701,6 +735,7 @@
         <button class="eq-period-btn" id="eqSourceWiseSimpleBtn" onclick="eqOpenSourceWiseSimple()">Source Wise</button>
         <button class="eq-period-btn" id="eqSourceWiseBtn" onclick="eqOpenSourceWise()">Source Wise Detailed</button>
         <button class="eq-period-btn" id="eqOldDataBtn" onclick="eqOpenOldData()">Old Data</button>
+        <button class="eq-period-btn" id="eqAmitReportBtn" onclick="eqOpenAmitReport()">Amit Report</button>
         <div class="eq-custom-range" id="eqCustomRange">
           <input type="date" id="eqRangeStart">
           <span>to</span>
@@ -870,6 +905,58 @@
         <span id="eqOldDataStatus" class="eq-sub" style="display:block;margin-bottom:8px;"></span>
         <div id="eqOldDataAsOnLabel" class="eq-old-data-as-on"></div>
         <div id="eqOldDataReportsContainer"></div>
+      </div>
+
+      <div id="eqAmitReportView" class="eq-detail-view">
+        <button class="eq-detail-back" onclick="eqCloseAmitReport()">&larr; Back to Dashboard</button>
+        <span id="eqAmitReportStatus" class="eq-sub" style="display:block;margin-bottom:8px;"></span>
+
+        <div class="eq-old-data-panel">
+          <div class="eq-amit-heading-row">
+            <h3 class="eq-report-heading" style="text-decoration:underline;">Current DR Status</h3>
+            <button class="eq-print-icon-btn" onclick="eqPrintAmitReport()" title="Print report" aria-label="Print report">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                <rect x="6" y="14" width="12" height="8"></rect>
+              </svg>
+            </button>
+          </div>
+          <div class="eq-table-scroll">
+            <table class="eq-old-data-table eq-amit-table">
+              <thead>
+                <tr>
+                  <th>S.No</th><th>Counsellor Name</th><th>Current DR</th><th>CRM Pending Calls</th>
+                  <th>Oldest Date (CRM)</th><th>DR Pending Followup - Pending Calls</th>
+                  <th>Oldest Date (DR Pending Followup)</th><th>When did you update Sure To Go Sheet</th>
+                </tr>
+              </thead>
+              <tbody id="eqAmitCurrentDrBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="eq-old-data-panel">
+          <h3 class="eq-report-heading" style="text-decoration:underline;">Emailer</h3>
+          <div class="eq-table-scroll">
+            <table class="eq-old-data-table eq-amit-table">
+              <thead>
+                <tr>
+                  <th>S.No</th><th>Counsellor Name</th><th>Current DR</th><th>CRM Pending Calls</th>
+                  <th>Oldest Date (CRM)</th><th>DR Pending Followup - Pending Calls</th>
+                  <th>Oldest Date (DR Pending Followup)</th><th>When did you update Sure To Go Sheet</th>
+                </tr>
+              </thead>
+              <tbody id="eqAmitEmailerBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="text-align:center;margin-top:24px;padding-bottom:20px;">
+          <div style="display:inline-block;border-top:1px solid var(--eq-text);padding-top:6px;min-width:180px;font-size:13px;color:var(--eq-text-soft);">
+            Prepared By
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1349,6 +1436,7 @@ function eqEnsureMainView(){
   document.getElementById('eqSourceWiseView').style.display = 'none';
   document.getElementById('eqSourceWiseSimpleView').style.display = 'none';
   document.getElementById('eqOldDataView').style.display = 'none';
+  document.getElementById('eqAmitReportView').style.display = 'none';
   document.getElementById('eqMainContent').style.display = 'block';
 }
 
@@ -1356,6 +1444,7 @@ function eqOpenSourceWise(){
   document.getElementById('eqMainContent').style.display = 'none';
   document.getElementById('eqSourceWiseSimpleView').style.display = 'none';
   document.getElementById('eqOldDataView').style.display = 'none';
+  document.getElementById('eqAmitReportView').style.display = 'none';
   document.getElementById('eqSourceWiseView').style.display = 'block';
   eqInitSourceWiseDates();
   eqLoadSourceWise();
@@ -1365,6 +1454,7 @@ function eqOpenSourceWiseSimple(){
   document.getElementById('eqMainContent').style.display = 'none';
   document.getElementById('eqSourceWiseView').style.display = 'none';
   document.getElementById('eqOldDataView').style.display = 'none';
+  document.getElementById('eqAmitReportView').style.display = 'none';
   document.getElementById('eqSourceWiseSimpleView').style.display = 'block';
   eqLoadSourceWiseSimple();
 }
@@ -1373,6 +1463,7 @@ function eqOpenOldData(){
   document.getElementById('eqMainContent').style.display = 'none';
   document.getElementById('eqSourceWiseView').style.display = 'none';
   document.getElementById('eqSourceWiseSimpleView').style.display = 'none';
+  document.getElementById('eqAmitReportView').style.display = 'none';
   document.getElementById('eqOldDataView').style.display = 'block';
   eqLoadOldData();
 }
@@ -1381,6 +1472,131 @@ function eqCloseOldData(){
   document.getElementById('eqOldDataView').style.display = 'none';
   document.getElementById('eqMainContent').style.display = 'block';
 }
+
+const EQ_AMIT_CURRENT_DR_NAMES = [
+  'Manju', 'Shabnoor', 'Sonam', 'Beena', 'Revathy- Bangalore Doer',
+  'Doer Saloni - Mumbai', 'MJ', 'Bangalore Misc', 'Mumbai Misc', 'Work Visa',
+  'MBBS', 'Global Medicare Enquiries', 'ABT Kits', 'Capsule', 'HBT Kits',
+  'Digitrapper', 'Fecal', 'EUS'
+];
+const EQ_AMIT_EMAILER_NAMES = [
+  'Madhusmita', 'DR2027', 'DR2028', 'Misc DR', '1st Call PNP', 'Close with Ma\'am'
+];
+
+// 6 data columns per row: [Current DR, CRM Pending Calls, Oldest Date (CRM),
+// DR Pending Followup - Pending Calls, Oldest Date (DR Pending Followup),
+// When did you update Sure To Go Sheet]. Columns 0, 3 and 4 are wired to
+// live MJ!AW:AY data (read-only, computed) when liveStats is provided;
+// the rest stay as manual/editable inputs. Rows without liveStats (12-18
+// of Current DR Status) stay fully editable/unconnected, as before.
+function eqAmitRowHtml_(sno, name, prefix, liveStats){
+  const cells = [];
+  for (let c = 0; c < 6; c++){
+    if (liveStats && (c === 0 || c === 1 || c === 2 || c === 3 || c === 4)){
+      let val;
+      if (c === 0) val = liveStats.current;
+      else if (c === 1) val = liveStats.crmCount;
+      else if (c === 2) val = liveStats.crmOldestDate;
+      else if (c === 3) val = liveStats.pending;
+      else val = liveStats.oldestDate;
+      cells.push(`<td class="eq-amit-live-cell">${val === '' || val === undefined ? '-' : eqEscapeHtml_(String(val))}</td>`);
+    } else {
+      cells.push(`<td><input type="text" id="${prefix}_${sno}_${c}"></td>`);
+    }
+  }
+  return `<tr><td>${sno}</td><td>${eqEscapeHtml_(name)}</td>${cells.join('')}</tr>`;
+}
+
+let eqAmitReportRendered = false;
+function eqRenderAmitReport(liveData){
+  const counsellorLive = (liveData && liveData.counsellorRows) || [];
+  const emailerLiveMap = (liveData && liveData.emailerRows) || {};
+  const emailerLiveOrder = [
+    emailerLiveMap.madhusmita, emailerLiveMap.dr2027, emailerLiveMap.dr2028,
+    emailerLiveMap.miscDr, emailerLiveMap.firstCallPnp, emailerLiveMap.closeWithMaam
+  ];
+
+  document.getElementById('eqAmitCurrentDrBody').innerHTML =
+    EQ_AMIT_CURRENT_DR_NAMES.map((name, i) => eqAmitRowHtml_(i + 1, name, 'eqAmitCur', counsellorLive[i])).join('');
+  document.getElementById('eqAmitEmailerBody').innerHTML =
+    EQ_AMIT_EMAILER_NAMES.map((name, i) => eqAmitRowHtml_(i + 1, name, 'eqAmitEmail', emailerLiveOrder[i])).join('');
+}
+
+async function eqLoadAmitReport(){
+  const statusEl = document.getElementById('eqAmitReportStatus');
+  if (SCRIPT_URL.includes('PASTE_YOUR')) {
+    statusEl.textContent = 'Sheet not connected yet';
+    eqRenderAmitReport(null);
+    return;
+  }
+  try {
+    statusEl.textContent = 'Loading...';
+    const res = await eqFetchWithRetry(SCRIPT_URL + '?action=amitreport&_=' + Date.now());
+    const json = await res.json();
+    if (json.status !== 'ok') throw new Error(json.message || 'bad response');
+    eqRenderAmitReport(json);
+    statusEl.textContent = 'Connected - 5 columns are live from the sheet. Only "When did you update Sure To Go Sheet" is manual.';
+    eqAmitReportRendered = true;
+  } catch (err) {
+    statusEl.textContent = 'Could not load live data - showing blank form';
+    if (!eqAmitReportRendered) eqRenderAmitReport(null);
+  }
+}
+
+function eqOpenAmitReport(){
+  document.getElementById('eqMainContent').style.display = 'none';
+  document.getElementById('eqSourceWiseView').style.display = 'none';
+  document.getElementById('eqSourceWiseSimpleView').style.display = 'none';
+  document.getElementById('eqOldDataView').style.display = 'none';
+  document.getElementById('eqAmitReportView').style.display = 'block';
+  eqLoadAmitReport();
+}
+
+function eqCloseAmitReport(){
+  document.getElementById('eqAmitReportView').style.display = 'none';
+  document.getElementById('eqMainContent').style.display = 'block';
+}
+
+// Prints ONLY the Current DR Status table - captures each input's current
+// typed value first (since inputs don't show their value via outerHTML),
+// builds a clean printable copy in the hidden #eqPrintArea, then uses the
+// browser's native print dialog.
+// Prints the WHOLE Amit Report (Current DR Status + Emailer) on one A4
+// print job. Captures each input's current typed value first (since
+// inputs don't show their value via outerHTML/cloneNode), builds a clean
+// printable copy in the hidden #eqPrintArea, then opens the native print
+// dialog.
+function eqCloneTableForPrint_(tbodyId){
+  const table = document.getElementById(tbodyId).closest('table');
+  const clone = table.cloneNode(true);
+  clone.querySelectorAll('input').forEach(input => {
+    input.setAttribute('value', input.value);
+  });
+  return clone;
+}
+
+function eqPrintAmitReport(){
+  const printArea = document.getElementById('eqPrintArea');
+  printArea.innerHTML = '';
+
+  printArea.appendChild(Object.assign(document.createElement('h2'), { textContent: 'Current DR Status' }));
+  printArea.appendChild(eqCloneTableForPrint_('eqAmitCurrentDrBody'));
+
+  const spacer = document.createElement('div');
+  spacer.className = 'eq-print-section-gap';
+  printArea.appendChild(spacer);
+
+  printArea.appendChild(Object.assign(document.createElement('h2'), { textContent: 'Emailer' }));
+  printArea.appendChild(eqCloneTableForPrint_('eqAmitEmailerBody'));
+
+  document.body.classList.add('eq-printing-mode');
+  window.print();
+}
+
+window.addEventListener('afterprint', () => {
+  document.body.classList.remove('eq-printing-mode');
+  document.getElementById('eqPrintArea').innerHTML = '';
+});
 
 let eqOldDataLoaded = false;
 
@@ -1907,7 +2123,7 @@ function showSection(name){
 
   if (name === 'dashboard'){
     document.getElementById('dashboardSection').classList.add('active');
-    if (eqInitialized) { eqCloseSourceWise(); eqCloseSourceWiseSimple(); eqCloseOldData(); }
+    if (eqInitialized) { eqCloseSourceWise(); eqCloseSourceWiseSimple(); eqCloseOldData(); eqCloseAmitReport(); }
   } else if (name === 'mj'){
     document.getElementById('mjSection').classList.add('active');
     if (!eqInitialized){ eqInitialized = true; eqInitDashboard(); }
@@ -1929,5 +2145,6 @@ function showSJView(view){
   if (view === 'doerBreakup' && !doerBreakupLoaded) loadDoerBreakup();
 }
 </script>
+<div id="eqPrintArea"></div>
 </body>
 </html>
