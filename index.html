@@ -732,7 +732,6 @@
           <button class="eq-period-btn" data-period="lastMonth">Last Month</button>
           <button class="eq-period-btn" data-period="custom">Custom Date Range</button>
         </div>
-        <button class="eq-period-btn" id="eqSourceWiseSimpleBtn" onclick="eqOpenSourceWiseSimple()">Source Wise</button>
         <button class="eq-period-btn" id="eqSourceWiseBtn" onclick="eqOpenSourceWise()">Source Wise Detailed</button>
         <button class="eq-period-btn" id="eqOldDataBtn" onclick="eqOpenOldData()">Old Data</button>
         <button class="eq-period-btn" id="eqAmitReportBtn" onclick="eqOpenAmitReport()">Amit Report</button>
@@ -807,20 +806,6 @@
 
       </div>
 
-      <div id="eqSourceWiseSimpleView" class="eq-detail-view">
-        <button class="eq-detail-back" onclick="eqCloseSourceWiseSimple()">&larr; Back to Dashboard</button>
-        <div class="eq-section-card">
-          <h3>Source Wise <span class="eq-sub" id="eqSwSimpleRangeLabel"></span></h3>
-          <div class="eq-table-scroll">
-            <table class="eq-table eq-report-table eq-sw-simple-table">
-              <thead>
-                <tr><th></th><th>Enquiry</th><th>Documents</th><th>%</th></tr>
-              </thead>
-              <tbody id="eqSwSimpleBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
 
       <div id="eqSourceWiseView" class="eq-detail-view">
         <button class="eq-detail-back" onclick="eqCloseSourceWise()">&larr; Back to Dashboard</button>
@@ -1434,7 +1419,6 @@ function eqEscapeHtml_(val){
 // open automatically brings the main report back into view.
 function eqEnsureMainView(){
   document.getElementById('eqSourceWiseView').style.display = 'none';
-  document.getElementById('eqSourceWiseSimpleView').style.display = 'none';
   document.getElementById('eqOldDataView').style.display = 'none';
   document.getElementById('eqAmitReportView').style.display = 'none';
   document.getElementById('eqMainContent').style.display = 'block';
@@ -1442,7 +1426,6 @@ function eqEnsureMainView(){
 
 function eqOpenSourceWise(){
   document.getElementById('eqMainContent').style.display = 'none';
-  document.getElementById('eqSourceWiseSimpleView').style.display = 'none';
   document.getElementById('eqOldDataView').style.display = 'none';
   document.getElementById('eqAmitReportView').style.display = 'none';
   document.getElementById('eqSourceWiseView').style.display = 'block';
@@ -1450,19 +1433,9 @@ function eqOpenSourceWise(){
   eqLoadSourceWise();
 }
 
-function eqOpenSourceWiseSimple(){
-  document.getElementById('eqMainContent').style.display = 'none';
-  document.getElementById('eqSourceWiseView').style.display = 'none';
-  document.getElementById('eqOldDataView').style.display = 'none';
-  document.getElementById('eqAmitReportView').style.display = 'none';
-  document.getElementById('eqSourceWiseSimpleView').style.display = 'block';
-  eqLoadSourceWiseSimple();
-}
-
 function eqOpenOldData(){
   document.getElementById('eqMainContent').style.display = 'none';
   document.getElementById('eqSourceWiseView').style.display = 'none';
-  document.getElementById('eqSourceWiseSimpleView').style.display = 'none';
   document.getElementById('eqAmitReportView').style.display = 'none';
   document.getElementById('eqOldDataView').style.display = 'block';
   eqLoadOldData();
@@ -1546,7 +1519,6 @@ async function eqLoadAmitReport(){
 function eqOpenAmitReport(){
   document.getElementById('eqMainContent').style.display = 'none';
   document.getElementById('eqSourceWiseView').style.display = 'none';
-  document.getElementById('eqSourceWiseSimpleView').style.display = 'none';
   document.getElementById('eqOldDataView').style.display = 'none';
   document.getElementById('eqAmitReportView').style.display = 'block';
   eqLoadAmitReport();
@@ -1556,6 +1528,12 @@ function eqCloseAmitReport(){
   document.getElementById('eqAmitReportView').style.display = 'none';
   document.getElementById('eqMainContent').style.display = 'block';
 }
+
+// Uses whichever period filter (Today / Last 6 Days / Current Month /
+// Last Month / Custom Date Range) is currently active on the main
+// dashboard - reuses the exact same FB Study Abroad / MBBS classification
+// logic as Source Wise Detailed's FB section, just totals only, no adset list.
+
 
 // Prints ONLY the Current DR Status table - captures each input's current
 // typed value first (since inputs don't show their value via outerHTML),
@@ -1693,11 +1671,6 @@ async function eqLoadOldData(){
   }
 }
 
-function eqCloseSourceWiseSimple(){
-  document.getElementById('eqSourceWiseSimpleView').style.display = 'none';
-  document.getElementById('eqMainContent').style.display = 'block';
-}
-
 // Uses whichever period filter (Today / Last 6 Days / Current Month /
 // Last Month / Custom Date Range) is currently active on the main
 // dashboard - reuses the exact same FB Study Abroad / MBBS classification
@@ -1711,47 +1684,7 @@ function eqFormatDDMMYYYY(d){
   return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 }
 
-function eqLoadSourceWiseSimple(){
-  const bodyEl = document.getElementById('eqSwSimpleBody');
-  const rangeLabelEl = document.getElementById('eqSwSimpleRangeLabel');
 
-  // Guard against opening this view before the main enquiry data has
-  // finished loading - without this, counts would (incorrectly) compute
-  // against an empty eqAllData array.
-  if (!eqDataLoaded){
-    bodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--eq-text-soft);padding:16px;">Loading data...</td></tr>`;
-    setTimeout(eqLoadSourceWiseSimple, 400);
-    return;
-  }
-
-  // Source Wise uses the exact same range as the main report's TILL DATE
-  // row (current month start -> yesterday, today's data excluded) - the
-  // shared eqGetTillDateRange() helper guarantees these can never drift
-  // apart, since both read from the identical function.
-  const { start, end } = eqGetTillDateRange();
-
-  // Same data, same period filter, same quick filters, same classification
-  // as the main MBBS Other Region / Study Abroad panels - guarantees
-  // matching numbers.
-  let rows = eqAllData.filter(r => eqInRange(r.date, start, end));
-  rows = eqApplyQuickFilters(rows);
-
-  const mbbsCount = rows.filter(r => r.type === 'MBBS' && r.source !== 'Facebook Ads').length;
-  const studyAbroadCount = rows.filter(r => r.type === 'Non-MBBS').length;
-
-  const mbbsDocs = eqCountDocsInDateRange(start, end, true);
-  const studyAbroadDocs = eqCountDocsInDateRange(start, end, false);
-
-  const mbbsPct = mbbsCount ? (mbbsDocs / mbbsCount * 100).toFixed(1) + '%' : '0.0%';
-  const studyAbroadPct = studyAbroadCount ? (studyAbroadDocs / studyAbroadCount * 100).toFixed(1) + '%' : '0.0%';
-
-  rangeLabelEl.textContent = `(TILL DATE: ${eqFormatDDMMYYYY(start)} - ${eqFormatDDMMYYYY(end)})`;
-
-  bodyEl.innerHTML = `
-    <tr><td>FB STUDY ABROAD</td><td>${studyAbroadCount}</td><td>${studyAbroadDocs}</td><td>${studyAbroadPct}</td></tr>
-    <tr><td>FB MBBS</td><td>${mbbsCount}</td><td>${mbbsDocs}</td><td>${mbbsPct}</td></tr>
-  `;
-}
 
 function eqCloseSourceWise(){
   document.getElementById('eqSourceWiseView').style.display = 'none';
@@ -1815,9 +1748,9 @@ async function eqLoadSourceWise(){
     if (myRequestId !== eqSwRequestId) return;
     if (json.status !== 'ok') throw new Error(json.message || 'bad response');
 
-    // Documents now come straight from the backend - each row's own status
+    // Documents come straight from the backend - each row's own status
     // column (F/K/O/T/Z depending on section) checked for "DR"
-    // (case-insensitive). No estimation/allocation anymore.
+    // (case-insensitive). No estimation/allocation.
     const renderRows = (containerId, items) => {
       const el = document.getElementById(containerId);
       el.innerHTML = items.length
@@ -1828,30 +1761,38 @@ async function eqLoadSourceWise(){
         : `<tr><td colspan="4" style="text-align:center;color:var(--eq-text-soft);padding:14px;">No records for this date range</td></tr>`;
     };
 
-    renderRows('eqSwFbStudyBody', json.fb.studyAbroad);
-    renderRows('eqSwFbMbbsBody', json.fb.mbbs);
-    renderRows('eqSwBoBody', json.bestOverseas);
-    renderRows('eqSwOtherBody', [
+    // Same as renderRows, but appends a subtotal row (sum of everything
+    // just listed) at the bottom of that section only - separate from,
+    // and not part of, the bottom Grand Total row.
+    const renderRowsWithSubtotal = (containerId, items) => {
+      renderRows(containerId, items);
+      const total = items.reduce((s, i) => ({ count: s.count + i.count, docs: s.docs + i.docs }), { count: 0, docs: 0 });
+      const pct = total.count ? (total.docs / total.count * 100).toFixed(1) + '%' : '0.0%';
+      document.getElementById(containerId).innerHTML +=
+        `<tr class="eq-report-summary"><td>TOTAL</td><td>${total.count}</td><td>${total.docs}</td><td>${pct}</td></tr>`;
+      return total;
+    };
+
+    const fbStudyTotal = renderRowsWithSubtotal('eqSwFbStudyBody', json.fb.studyAbroad);
+    const fbMbbsTotal = renderRowsWithSubtotal('eqSwFbMbbsBody', json.fb.mbbs);
+    const boTotal = renderRowsWithSubtotal('eqSwBoBody', json.bestOverseas);
+    renderRowsWithSubtotal('eqSwOtherBody', [
       { name: 'Reference', count: json.reference.count, docs: json.reference.docs },
       { name: 'Ireland Landing Page', count: json.ireland.count, docs: json.ireland.docs },
       { name: 'Website', count: json.website.count, docs: json.website.docs }
     ]);
     renderRows('eqSwWaBody', [json.whatsapp]);
 
-    // Bottom TOTAL row - straight sum of every category shown above
+    // Grand Total row - straight sum of every category shown above
     // (WhatsApp excluded, as before). % is a fresh Total Docs / Total
     // Enquiries calculation, never a sum/average of the individual %s.
-    const fbStudyTotal = json.fb.studyAbroad.reduce((s, i) => ({ count: s.count + i.count, docs: s.docs + i.docs }), { count: 0, docs: 0 });
-    const fbMbbsTotal = json.fb.mbbs.reduce((s, i) => ({ count: s.count + i.count, docs: s.docs + i.docs }), { count: 0, docs: 0 });
-    const boTotal = json.bestOverseas.reduce((s, i) => ({ count: s.count + i.count, docs: s.docs + i.docs }), { count: 0, docs: 0 });
-
     const grandEnquiries = fbStudyTotal.count + fbMbbsTotal.count + boTotal.count
       + json.reference.count + json.ireland.count + json.website.count;
     const grandDocuments = fbStudyTotal.docs + fbMbbsTotal.docs + boTotal.docs
       + json.reference.docs + json.ireland.docs + json.website.docs;
     const grandPct = grandEnquiries ? (grandDocuments / grandEnquiries * 100).toFixed(1) + '%' : '0.0%';
     document.getElementById('eqSwGrandTotalBody').innerHTML =
-      `<tr class="eq-sw-grand-total-row"><td>TOTAL</td><td>${grandEnquiries}</td><td>${grandDocuments}</td><td>${grandPct}</td></tr>`;
+      `<tr class="eq-sw-grand-total-row"><td>Grand Total</td><td>${grandEnquiries}</td><td>${grandDocuments}</td><td>${grandPct}</td></tr>`;
 
     document.getElementById('eqSwTotal').textContent = grandEnquiries;
 
@@ -2123,7 +2064,7 @@ function showSection(name){
 
   if (name === 'dashboard'){
     document.getElementById('dashboardSection').classList.add('active');
-    if (eqInitialized) { eqCloseSourceWise(); eqCloseSourceWiseSimple(); eqCloseOldData(); eqCloseAmitReport(); }
+    if (eqInitialized) { eqCloseSourceWise(); eqCloseOldData(); eqCloseAmitReport(); }
   } else if (name === 'mj'){
     document.getElementById('mjSection').classList.add('active');
     if (!eqInitialized){ eqInitialized = true; eqInitDashboard(); }
