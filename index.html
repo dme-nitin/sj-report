@@ -1901,7 +1901,8 @@ function eqBuildReportTable(dailyRows, tbodyId, fullRows, isMBBSFlag, spendMap, 
   }).join('');
 
   if (!dates.length){
-    bodyHtml = `<tr><td colspan="7" style="text-align:center;color:var(--eq-text-soft);padding:16px;">No records for this range</td></tr>` + bodyHtml;
+    // No enquiry rows in this range: show a zero row instead of a message
+    bodyHtml = `<tr><td>-</td><td>-</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>` + bodyHtml;
   }
 
   // One full-month row for every month from April up to (not including)
