@@ -540,6 +540,12 @@
   #mjDashboardRoot .eq-old-data-subheader-row:hover td{
     background:#ffe066;
   }
+  #mjDashboardRoot .eq-old-data-table td.eq-old-label-green{
+    background:#c9efd5; color:#0f172a; font-weight:700;
+  }
+  #mjDashboardRoot .eq-old-data-table td.eq-old-label-blue{
+    background:#cfe5fb; color:#0f172a; font-weight:700;
+  }
   #mjDashboardRoot .eq-old-data-title-row{
     padding:14px 10px; font-size:13px;
   }
@@ -1594,6 +1600,13 @@ function eqOldDataTitleHtml_(text){
 // directly above it (cell by cell, stacked with a line break). Applied
 // generically to every Old Data report - no per-report special-casing,
 // and never touches the header row (index 0).
+const EQ_OLD_LABELS_GREEN = ['applications', 'paid', 'visa approved'];
+const EQ_OLD_LABELS_BLUE = ['facbook', 'facebook', 'google/ireland landing page', 'website',
+  'best overseas others', 'reference', 'total'];
+function eqOldLabelKey_(s){
+  return String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
 async function eqLoadOldData(){
   const statusEl = document.getElementById('eqOldDataStatus');
   const containerEl = document.getElementById('eqOldDataReportsContainer');
@@ -1649,10 +1662,23 @@ async function eqLoadOldData(){
       const theadHtml = (headerFilled.length === 1)
         ? `<tr><th colspan="${numCols}" class="eq-old-data-title-row">${eqOldDataTitleHtml_(headerFilled[0].c)}</th></tr>`
         : `<tr>${headerRow.map(h => `<th>${eqEscapeHtml_(h).replace(/\n/g, '<br>')}</th>`).join('')}</tr>`;
+      // Section-label cells (first column) get a background colour, only
+      // inside the report they belong to: Report 4's Applications / PAID /
+      // Visa Approved -> light green, Report 5's source names -> light blue.
+      const reportTitle = String(headerRow[0] || '').trim().toUpperCase();
+      let labelSet = null, labelClass = '';
+      if (/^REPORT-4\b/.test(reportTitle)) { labelSet = EQ_OLD_LABELS_GREEN; labelClass = 'eq-old-label-green'; }
+      else if (/^REPORT-5\b/.test(reportTitle)) { labelSet = EQ_OLD_LABELS_BLUE; labelClass = 'eq-old-label-blue'; }
+
       const tbodyHtml = bodyRows.map((row, i) => {
         const isHeaderRow = headerRowFlags[i + 1];
         const rowClass = isHeaderRow ? ' class="eq-old-data-subheader-row"' : '';
-        return `<tr${rowClass}>${row.map(cell => `<td>${eqEscapeHtml_(cell).replace(/\n/g, '<br>')}</td>`).join('')}</tr>`;
+        const cellsHtml = row.map((cell, j) => {
+          const colorClass = (j === 0 && labelSet && labelSet.indexOf(eqOldLabelKey_(cell)) !== -1)
+            ? ` class="${labelClass}"` : '';
+          return `<td${colorClass}>${eqEscapeHtml_(cell).replace(/\n/g, '<br>')}</td>`;
+        }).join('');
+        return `<tr${rowClass}>${cellsHtml}</tr>`;
       }).join('');
       return `
         <div class="eq-old-data-panel">
