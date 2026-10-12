@@ -450,13 +450,13 @@
 
   #mjDashboardRoot .eq-filter-bar{
     background:#f8fafc; border:1px solid var(--eq-border); border-radius:12px; padding:10px 14px;
-    margin-bottom:16px; display:flex; flex-wrap:nowrap; align-items:center; gap:8px;
-    overflow-x:auto; -webkit-overflow-scrolling:touch;
+    margin-bottom:16px; display:flex; flex-wrap:nowrap; align-items:center; gap:5px;
+    overflow-x:hidden;
   }
-  #mjDashboardRoot .eq-period-btns{display:flex; gap:6px; flex-wrap:nowrap; flex-shrink:0;}
+  #mjDashboardRoot .eq-period-btns{display:flex; gap:5px; flex-wrap:nowrap; flex-shrink:0;}
   #mjDashboardRoot .eq-period-btn{
     border:1px solid var(--eq-border); background:#fff; color:var(--eq-text-soft);
-    padding:6px 10px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit;
+    padding:6px 8px; border-radius:8px; font-size:11.5px; font-weight:600; cursor:pointer; font-family:inherit;
     white-space:nowrap; flex-shrink:0;
   }
   #mjDashboardRoot .eq-period-btn.active{background:var(--eq-blue); color:#fff; border-color:var(--eq-blue);}
@@ -465,10 +465,10 @@
   #mjDashboardRoot .eq-custom-range input[type=date]{
     border:1px solid var(--eq-border); border-radius:7px; padding:6px 8px; font-size:12px; font-family:inherit; color:var(--eq-text);
   }
-  #mjDashboardRoot .eq-quick-filters{display:flex; gap:6px; flex-wrap:nowrap; flex-shrink:0; margin-left:auto;}
+  #mjDashboardRoot .eq-quick-filters{display:flex; gap:5px; flex-wrap:nowrap; flex-shrink:1; min-width:0; margin-left:auto;}
   #mjDashboardRoot .eq-quick-filters select{
     border:1px solid var(--eq-border); border-radius:7px; padding:6px 8px; font-size:12px; font-family:inherit; color:var(--eq-text); background:#fff;
-    flex-shrink:0; min-width:120px;
+    flex-shrink:1; min-width:0; width:auto; max-width:140px; padding:6px 4px; font-size:11.5px;
   }
   #mjDashboardRoot .eq-clear-filters{background:none; border:none; color:var(--eq-red); font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap; flex-shrink:0;}
 
@@ -546,6 +546,10 @@
   #mjDashboardRoot .eq-old-data-table td.eq-old-label-blue{
     background:#cfe5fb; color:#0f172a; font-weight:700;
   }
+  #mjDashboardRoot .eq-old-data-table td.eq-old-row-green,
+  #mjDashboardRoot .eq-old-data-table td.eq-old-row-blue{color:#0f172a;}
+  #mjDashboardRoot .eq-old-data-table td.eq-old-row-green{background:#c9efd5;}
+  #mjDashboardRoot .eq-old-data-table td.eq-old-row-blue{background:#cfe5fb;}
   #mjDashboardRoot .eq-old-data-title-row{
     padding:14px 10px; font-size:13px;
   }
@@ -792,6 +796,20 @@
                 </tr>
               </thead>
               <tbody id="eqReportStudyBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="eq-section-card">
+          <h3 class="eq-report-heading">Other</h3>
+          <div class="eq-table-scroll">
+            <table class="eq-table eq-report-table">
+              <thead>
+                <tr>
+                  <th></th><th>Enquiries</th><th>Documents</th><th>Docs %</th>
+                </tr>
+              </thead>
+              <tbody id="eqReportOtherBody"></tbody>
             </table>
           </div>
         </div>
@@ -1254,7 +1272,8 @@ async function eqLoadLiveData(){
       name: r.name,
       status: r.status,
       type: r.type,
-      docs: r.docs
+      docs: r.docs,
+      source: r.source
     }));
 
     // Populate the Status filter dynamically from whatever status values actually exist in the sheet
@@ -1294,13 +1313,17 @@ async function eqLoadDocsClassifiedData(){
   }
 }
 
+// cat: 'mbbs' | 'fb' | 'other' (legacy true/false = mbbs / fb)
+function eqDocCat_(r){ return r.cat || (r.isMBBS ? 'mbbs' : 'fb'); }
+function eqCatKey_(flag){ return flag === true ? 'mbbs' : (flag === false ? 'fb' : flag); }
 function eqCountDocsForDate(dateStr, isMBBSFlag){
-  return eqDocsClassifiedAll.filter(r => r.date === dateStr && r.isMBBS === isMBBSFlag).length;
+  const cat = eqCatKey_(isMBBSFlag);
+  return eqDocsClassifiedAll.filter(r => r.date === dateStr && eqDocCat_(r) === cat).length;
 }
 
 function eqCountDocsInDateRange(start, end, isMBBSFlag){
   return eqDocsClassifiedAll.filter(r => {
-    if (r.isMBBS !== isMBBSFlag) return false;
+    if (eqDocCat_(r) !== eqCatKey_(isMBBSFlag)) return false;
     const d = eqParseYMD(r.date);
     return d >= start && d <= end;
   }).length;
@@ -1673,9 +1696,15 @@ async function eqLoadOldData(){
       const tbodyHtml = bodyRows.map((row, i) => {
         const isHeaderRow = headerRowFlags[i + 1];
         const rowClass = isHeaderRow ? ' class="eq-old-data-subheader-row"' : '';
+        // Report 5 blue label rows are coloured across the whole row;
+        // Reports 1-3 "% Conversion ..." rows are light green across the row.
+        let rowTint = '';
+        if (labelClass === 'eq-old-label-blue' && labelSet.indexOf(eqOldLabelKey_(row[0])) !== -1) rowTint = 'eq-old-row-blue';
+        else if (/^REPORT-[123]\b/.test(reportTitle) && /^%\s*conversion/i.test(String(row[0] || '').trim())) rowTint = 'eq-old-row-green';
         const cellsHtml = row.map((cell, j) => {
-          const colorClass = (j === 0 && labelSet && labelSet.indexOf(eqOldLabelKey_(cell)) !== -1)
+          let colorClass = (j === 0 && labelSet && labelSet.indexOf(eqOldLabelKey_(cell)) !== -1)
             ? ` class="${labelClass}"` : '';
+          if (rowTint && !isHeaderRow) colorClass = ` class="${rowTint}"`;
           return `<td${colorClass}>${eqEscapeHtml_(cell).replace(/\n/g, '<br>')}</td>`;
         }).join('');
         return `<tr${rowClass}>${cellsHtml}</tr>`;
@@ -1975,11 +2004,12 @@ function eqBuildReportTable(dailyRows, tbodyId, fullRows, isMBBSFlag, spendMap, 
 // always a fresh Total Spent / Total Enquiries calculation - never a
 // sum or average of the two panels' own CPLs. N/A spend values are
 // treated as 0 so they still count toward the total.
-function eqRenderTotalPanel(mbbsInfo, studyInfo){
-  const combine = (a, b) => {
-    const count = a.count + b.count;
-    const docs = a.docs + b.docs;
-    const spend = (a.spend || 0) + (b.spend || 0);
+function eqRenderTotalPanel(mbbsInfo, studyInfo, otherInfo){
+  const combine = (a, b, c) => {
+    c = c || { count: 0, docs: 0, spend: 0 };
+    const count = a.count + b.count + c.count;
+    const docs = a.docs + b.docs + c.docs;
+    const spend = (a.spend || 0) + (b.spend || 0) + (c.spend || 0);
     const pct = count ? (docs / count * 100).toFixed(1) + '%' : '0.0%';
     return { count, docs, spend, pct };
   };
@@ -1988,12 +2018,12 @@ function eqRenderTotalPanel(mbbsInfo, studyInfo){
   // recent full month down to April last - this is purely a display
   // order change (built from the exact same pastMonths array, just
   // reversed), so it automatically re-orders itself every month.
-  const tillDateTotal = combine(mbbsInfo.tillDateStats, studyInfo.tillDateStats);
+  const tillDateTotal = combine(mbbsInfo.tillDateStats, studyInfo.tillDateStats, otherInfo.tillDateStats);
   let bodyHtml = `<tr class="eq-report-summary"><td colspan="2">${mbbsInfo.tillDateLabel} | ${mbbsInfo.currentMonthName}</td><td>${tillDateTotal.count}</td><td>${tillDateTotal.docs}</td><td>${tillDateTotal.pct}</td><td>${eqFormatSpent(tillDateTotal.spend)}</td><td>${eqFormatCPL(tillDateTotal.spend, tillDateTotal.count)}</td></tr>`;
 
   bodyHtml += mbbsInfo.pastMonths.slice().reverse().map((m, revIdx) => {
     const i = mbbsInfo.pastMonths.length - 1 - revIdx;
-    const total = combine(m.stats, studyInfo.pastMonths[i].stats);
+    const total = combine(m.stats, studyInfo.pastMonths[i].stats, otherInfo.pastMonths[i].stats);
     return `<tr class="eq-report-summary"><td colspan="2">MONTH | ${m.label}</td><td>${total.count}</td><td>${total.docs}</td><td>${total.pct}</td><td>${eqFormatSpent(total.spend)}</td><td>${eqFormatCPL(total.spend, total.count)}</td></tr>`;
   }).join('');
 
@@ -2011,14 +2041,34 @@ function eqRenderAll(){
   // calendar ranges (current month so far, and the full previous month).
   const fullRows = eqApplyQuickFilters(eqAllData);
 
-  const mbbsOtherRows = rows.filter(r => r.type === 'MBBS' && r.source !== 'Facebook Ads');
-  const studyAbroadRows = rows.filter(r => r.type === 'Non-MBBS');
-  const mbbsOtherFullRows = fullRows.filter(r => r.type === 'MBBS' && r.source !== 'Facebook Ads');
-  const studyAbroadFullRows = fullRows.filter(r => r.type === 'Non-MBBS');
+  const mbbsOtherRows = rows.filter(r => r.type === 'MBBS');
+  const studyAbroadRows = rows.filter(r => r.type === 'Non-MBBS' && r.source === 'Facebook Ads');
+  const otherRows = rows.filter(r => r.type === 'Non-MBBS' && r.source !== 'Facebook Ads');
+  const mbbsOtherFullRows = fullRows.filter(r => r.type === 'MBBS');
+  const studyAbroadFullRows = fullRows.filter(r => r.type === 'Non-MBBS' && r.source === 'Facebook Ads');
+  const otherFullRows = fullRows.filter(r => r.type === 'Non-MBBS' && r.source !== 'Facebook Ads');
 
   const mbbsInfo = eqBuildReportTable(mbbsOtherRows, 'eqReportMbbsOtherBody', mbbsOtherFullRows, true, eqMbbsSpendMap, 'lastOnly');
-  const studyInfo = eqBuildReportTable(studyAbroadRows, 'eqReportStudyBody', studyAbroadFullRows, false, eqStudyAbroadSpendMap, 'lastOnly');
-  eqRenderTotalPanel(mbbsInfo, studyInfo);
+  const studyInfo = eqBuildReportTable(studyAbroadRows, 'eqReportStudyBody', studyAbroadFullRows, 'fb', eqStudyAbroadSpendMap, 'lastOnly');
+
+  // Other: one single line for the selected period (no daily/month rows).
+  // Hidden table body is still built so the Total panel can use its stats.
+  const otherHidden = document.createElement('tbody');
+  otherHidden.id = 'eqReportOtherHiddenBody';
+  const otherInfo = (function(){
+    const tmp = document.getElementById('eqReportOtherHiddenBody');
+    if (!tmp){ otherHidden.style.display = 'none'; document.body.appendChild(otherHidden); }
+    return eqBuildReportTable(otherRows, 'eqReportOtherHiddenBody', otherFullRows, 'other', {}, 'lastOnly');
+  })();
+  let oStart = start, oEnd = end;
+  if (eqSelectedDate){ oStart = eqParseYMD(eqSelectedDate); oEnd = oStart; }
+  const otherCount = otherRows.length;
+  const otherDocs = eqCountDocsInDateRange(oStart, oEnd, 'other');
+  const otherPct = otherCount ? (otherDocs / otherCount * 100).toFixed(1) + '%' : '0.0%';
+  document.getElementById('eqReportOtherBody').innerHTML =
+    `<tr><td><b>Other</b></td><td>${otherCount}</td><td>${otherDocs}</td><td>${otherPct}</td></tr>`;
+
+  eqRenderTotalPanel(mbbsInfo, studyInfo, otherInfo);
 }
 
 document.getElementById('eqPeriodBtns').addEventListener('click', (e) => {
