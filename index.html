@@ -1933,7 +1933,7 @@ function eqGetFiscalMonthsToDate(){
   return months;
 }
 
-function eqBuildReportTable(dailyRows, tbodyId, fullRows, isMBBSFlag, spendMap, summaryMode = 'all'){
+function eqBuildReportTable(dailyRows, tbodyId, fullRows, isMBBSFlag, spendMap, summaryMode = 'all', sumDisplayed = false){
   const byDate = {};
   dailyRows.forEach(r => {
     if (!byDate[r.date]) byDate[r.date] = { count: 0 };
@@ -1983,9 +1983,18 @@ function eqBuildReportTable(dailyRows, tbodyId, fullRows, isMBBSFlag, spendMap, 
   // TILL DATE row: current month start -> yesterday (today's data excluded)
   const { start: monthStart, end: yesterday, today } = eqGetTillDateRange();
   const tillDateStats = eqSummaryStats(fullRows, monthStart, yesterday, isMBBSFlag, spendMap);
+  // sumDisplayed (Today / Last 6 Days): the current-month row's Enquiries and
+  // Documents are the sum of exactly the daily rows shown above it.
+  if (sumDisplayed){
+    let dc = 0, dd = 0;
+    dates.forEach(ds => { dc += byDate[ds].count; dd += eqCountDocsForDate(ds, isMBBSFlag); });
+    tillDateStats.count = dc;
+    tillDateStats.docs = dd;
+    tillDateStats.pct = dc ? (dd / dc * 100).toFixed(1) + '%' : '0.0%';
+  }
   const tillDateLabel = `TILL DATE ${String(yesterday.getDate()).padStart(2,'0')}/${String(yesterday.getMonth()+1).padStart(2,'0')}`;
   const currentMonthName = EQ_MONTH_NAMES[today.getMonth()];
-  const tillDateRowHtml = `<tr class="eq-report-summary"><td colspan="2">${tillDateLabel} | ${currentMonthName}</td><td>${tillDateStats.count}</td><td>${tillDateStats.docs}</td><td>${tillDateStats.pct}</td><td>${eqFormatSpent(tillDateStats.spend)}</td><td>${eqFormatCPL(tillDateStats.spend, tillDateStats.count)}</td></tr>`;
+  const tillDateRowHtml = `<tr class="eq-report-summary"><td colspan="2">MONTH | ${currentMonthName}</td><td>${tillDateStats.count}</td><td>${tillDateStats.docs}</td><td>${tillDateStats.pct}</td><td>${eqFormatSpent(tillDateStats.spend)}</td><td>${eqFormatCPL(tillDateStats.spend, tillDateStats.count)}</td></tr>`;
 
   if (summaryMode === 'all' || summaryMode === 'lastOnly'){
     bodyHtml += tillDateRowHtml;
@@ -2004,7 +2013,7 @@ function eqBuildReportTable(dailyRows, tbodyId, fullRows, isMBBSFlag, spendMap, 
 // always a fresh Total Spent / Total Enquiries calculation - never a
 // sum or average of the two panels' own CPLs. N/A spend values are
 // treated as 0 so they still count toward the total.
-function eqRenderTotalPanel(mbbsInfo, studyInfo, otherInfo){
+function eqRenderTotalPanel(mbbsInfo, studyInfo, otherInfo, otherShown){
   const combine = (a, b, c) => {
     c = c || { count: 0, docs: 0, spend: 0 };
     const count = a.count + b.count + c.count;
@@ -2018,8 +2027,8 @@ function eqRenderTotalPanel(mbbsInfo, studyInfo, otherInfo){
   // recent full month down to April last - this is purely a display
   // order change (built from the exact same pastMonths array, just
   // reversed), so it automatically re-orders itself every month.
-  const tillDateTotal = combine(mbbsInfo.tillDateStats, studyInfo.tillDateStats, otherInfo.tillDateStats);
-  let bodyHtml = `<tr class="eq-report-summary"><td colspan="2">${mbbsInfo.tillDateLabel} | ${mbbsInfo.currentMonthName}</td><td>${tillDateTotal.count}</td><td>${tillDateTotal.docs}</td><td>${tillDateTotal.pct}</td><td>${eqFormatSpent(tillDateTotal.spend)}</td><td>${eqFormatCPL(tillDateTotal.spend, tillDateTotal.count)}</td></tr>`;
+  const tillDateTotal = combine(mbbsInfo.tillDateStats, studyInfo.tillDateStats, otherShown || otherInfo.tillDateStats);
+  let bodyHtml = `<tr class="eq-report-summary"><td colspan="2">MONTH | ${mbbsInfo.currentMonthName}</td><td>${tillDateTotal.count}</td><td>${tillDateTotal.docs}</td><td>${tillDateTotal.pct}</td><td>${eqFormatSpent(tillDateTotal.spend)}</td><td>${eqFormatCPL(tillDateTotal.spend, tillDateTotal.count)}</td></tr>`;
 
   bodyHtml += mbbsInfo.pastMonths.slice().reverse().map((m, revIdx) => {
     const i = mbbsInfo.pastMonths.length - 1 - revIdx;
@@ -2056,7 +2065,7 @@ function eqRenderAll(){
   const otherFullRows = fullRows.filter(r => r.type === 'Non-MBBS' && r.source !== 'Facebook Ads' && !eqIsWhatsAppSource_(r.source));
 
   const mbbsInfo = eqBuildReportTable(mbbsOtherRows, 'eqReportMbbsOtherBody', mbbsOtherFullRows, true, eqMbbsSpendMap, 'lastOnly');
-  const studyInfo = eqBuildReportTable(studyAbroadRows, 'eqReportStudyBody', studyAbroadFullRows, 'fb', eqStudyAbroadSpendMap, 'lastOnly');
+  const studyInfo = eqBuildReportTable(studyAbroadRows, 'eqReportStudyBody', studyAbroadFullRows, 'fb', eqStudyAbroadSpendMap, 'lastOnly', eqActivePeriod === 'today' || eqActivePeriod === 'last6days');
 
   // Other: one single line for the selected period (no daily/month rows).
   // Hidden table body is still built so the Total panel can use its stats.
@@ -2075,7 +2084,9 @@ function eqRenderAll(){
   document.getElementById('eqReportOtherBody').innerHTML =
     `<tr><td><b>Other</b></td><td>${otherCount}</td><td>${otherDocs}</td><td>${otherPct}</td></tr>`;
 
-  eqRenderTotalPanel(mbbsInfo, studyInfo, otherInfo);
+  // Current-month (TILL DATE) Total row = exactly what the three panels show on screen:
+  // MBBS TILL DATE + Study Abroad TILL DATE + the Other line for the selected period.
+  eqRenderTotalPanel(mbbsInfo, studyInfo, otherInfo, { count: otherCount, docs: otherDocs, spend: 0 });
 }
 
 document.getElementById('eqPeriodBtns').addEventListener('click', (e) => {
