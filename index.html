@@ -2030,6 +2030,13 @@ function eqRenderTotalPanel(mbbsInfo, studyInfo, otherInfo){
   document.getElementById('eqReportTotalBody').innerHTML = bodyHtml;
 }
 
+// These 3 sources are counted ONLY in Source Wise Detailed's WHATSAPP
+// section, never in the Other panel (or the Total built from it).
+function eqIsWhatsAppSource_(src){
+  const k = String(src || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  return k === 'fb whatsapp campaign' || k === 'w/a existing students' || k === 'w/a community revert';
+}
+
 function eqRenderAll(){
   const {start, end} = eqGetPeriodRange(eqActivePeriod);
   let rows = eqAllData.filter(r => eqInRange(r.date, start, end));
@@ -2043,10 +2050,10 @@ function eqRenderAll(){
 
   const mbbsOtherRows = rows.filter(r => r.type === 'MBBS');
   const studyAbroadRows = rows.filter(r => r.type === 'Non-MBBS' && r.source === 'Facebook Ads');
-  const otherRows = rows.filter(r => r.type === 'Non-MBBS' && r.source !== 'Facebook Ads');
+  const otherRows = rows.filter(r => r.type === 'Non-MBBS' && r.source !== 'Facebook Ads' && !eqIsWhatsAppSource_(r.source));
   const mbbsOtherFullRows = fullRows.filter(r => r.type === 'MBBS');
   const studyAbroadFullRows = fullRows.filter(r => r.type === 'Non-MBBS' && r.source === 'Facebook Ads');
-  const otherFullRows = fullRows.filter(r => r.type === 'Non-MBBS' && r.source !== 'Facebook Ads');
+  const otherFullRows = fullRows.filter(r => r.type === 'Non-MBBS' && r.source !== 'Facebook Ads' && !eqIsWhatsAppSource_(r.source));
 
   const mbbsInfo = eqBuildReportTable(mbbsOtherRows, 'eqReportMbbsOtherBody', mbbsOtherFullRows, true, eqMbbsSpendMap, 'lastOnly');
   const studyInfo = eqBuildReportTable(studyAbroadRows, 'eqReportStudyBody', studyAbroadFullRows, 'fb', eqStudyAbroadSpendMap, 'lastOnly');
