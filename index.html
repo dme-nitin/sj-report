@@ -2092,7 +2092,17 @@ function eqRenderAll(){
 
   // Current-month (TILL DATE) Total row = exactly what the three panels show on screen:
   // MBBS TILL DATE + Study Abroad TILL DATE + the Other line for the selected period.
-  eqRenderTotalPanel(mbbsInfo, studyInfo, otherInfo, { count: otherCount, docs: otherDocs, spend: 0 });
+  // Today / Last 6 Days: MBBS counts in the Total row only for what its own daily
+  // rows show; a month-to-date MBBS document is counted under Current Month only.
+  let mbbsForTotal = mbbsInfo;
+  if (eqActivePeriod === 'today' || eqActivePeriod === 'last6days'){
+    const mDates = {};
+    mbbsOtherRows.forEach(r => { mDates[r.date] = (mDates[r.date] || 0) + 1; });
+    let mc = 0, md = 0;
+    Object.keys(mDates).forEach(ds => { mc += mDates[ds]; md += eqCountDocsForDate(ds, true); });
+    mbbsForTotal = Object.assign({}, mbbsInfo, { tillDateStats: Object.assign({}, mbbsInfo.tillDateStats, { count: mc, docs: md, spend: 0 }) });
+  }
+  eqRenderTotalPanel(mbbsForTotal, studyInfo, otherInfo, { count: otherCount, docs: otherDocs, spend: 0 });
 }
 
 document.getElementById('eqPeriodBtns').addEventListener('click', (e) => {
