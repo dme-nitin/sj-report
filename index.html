@@ -2013,6 +2013,12 @@ function eqBuildReportTable(dailyRows, tbodyId, fullRows, isMBBSFlag, spendMap, 
 // always a fresh Total Spent / Total Enquiries calculation - never a
 // sum or average of the two panels' own CPLs. N/A spend values are
 // treated as 0 so they still count toward the total.
+// Label suffix for the Total panel's current-month row, e.g. "(Last 6 Days)".
+function eqTotalPeriodSuffix_(){
+  const m = { last6days: ' (Last 6 Days)', today: ' (Today)', currentMonth: ' (Current Month)' };
+  return m[eqActivePeriod] || '';
+}
+
 function eqRenderTotalPanel(mbbsInfo, studyInfo, otherInfo, otherShown){
   const combine = (a, b, c) => {
     c = c || { count: 0, docs: 0, spend: 0 };
@@ -2028,7 +2034,7 @@ function eqRenderTotalPanel(mbbsInfo, studyInfo, otherInfo, otherShown){
   // order change (built from the exact same pastMonths array, just
   // reversed), so it automatically re-orders itself every month.
   const tillDateTotal = combine(mbbsInfo.tillDateStats, studyInfo.tillDateStats, otherShown || otherInfo.tillDateStats);
-  let bodyHtml = `<tr class="eq-report-summary"><td colspan="2">MONTH | ${mbbsInfo.currentMonthName}</td><td>${tillDateTotal.count}</td><td>${tillDateTotal.docs}</td><td>${tillDateTotal.pct}</td><td>${eqFormatSpent(tillDateTotal.spend)}</td><td>${eqFormatCPL(tillDateTotal.spend, tillDateTotal.count)}</td></tr>`;
+  let bodyHtml = `<tr class="eq-report-summary"><td colspan="2">MONTH | ${mbbsInfo.currentMonthName}${eqTotalPeriodSuffix_()}</td><td>${tillDateTotal.count}</td><td>${tillDateTotal.docs}</td><td>${tillDateTotal.pct}</td><td>${eqFormatSpent(tillDateTotal.spend)}</td><td>${eqFormatCPL(tillDateTotal.spend, tillDateTotal.count)}</td></tr>`;
 
   bodyHtml += mbbsInfo.pastMonths.slice().reverse().map((m, revIdx) => {
     const i = mbbsInfo.pastMonths.length - 1 - revIdx;
