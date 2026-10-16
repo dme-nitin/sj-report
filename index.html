@@ -1313,6 +1313,27 @@ async function eqLoadDocsClassifiedData(){
   }
 }
 
+// Fair database (MJ!BL:BN): each record is one enquiry {date}. Its documents
+// arrive in eqDocsClassifiedAll with cat 'fair'. Both are shown only inside the
+// Other line / Other totals.
+let eqFairEnquiries = [];
+
+async function eqLoadFairData(){
+  if (SCRIPT_URL.includes('PASTE_YOUR')) return;
+  try {
+    const res = await eqFetchWithRetry(SCRIPT_URL + '?action=fairDb&_=' + Date.now());
+    const json = await res.json();
+    if (json.status !== 'ok') throw new Error(json.message || 'bad response');
+    eqFairEnquiries = json.records || [];
+  } catch (err) {
+    eqFairEnquiries = [];
+  }
+}
+
+function eqFairEnquiriesInRange(start, end){
+  return eqFairEnquiries.filter(r => { const d = eqParseYMD(r.date); return d >= start && d <= end; }).length;
+}
+
 // cat: 'mbbs' | 'fb' | 'other' (legacy true/false = mbbs / fb)
 function eqDocCat_(r){ return r.cat || (r.isMBBS ? 'mbbs' : 'fb'); }
 function eqCatKey_(flag){ return flag === true ? 'mbbs' : (flag === false ? 'fb' : flag); }
@@ -1890,8 +1911,13 @@ const EQ_MONTH_NAMES = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY'
 
 function eqSummaryStats(rows, start, end, isMBBSFlag, spendMap){
   const filtered = rows.filter(r => { const d = eqParseYMD(r.date); return d >= start && d <= end; });
-  const count = filtered.length;
-  const docs = eqCountDocsInDateRange(start, end, isMBBSFlag);
+  let count = filtered.length;
+  let docs = eqCountDocsInDateRange(start, end, isMBBSFlag);
+  if (eqCatKey_(isMBBSFlag) === 'other'){
+    // Other also carries the Fair database (enquiries from BL:BN, docs tagged EI Fair Data Oct 26)
+    count += eqFairEnquiriesInRange(start, end);
+    docs += eqCountDocsInDateRange(start, end, 'fair');
+  }
   const pct = count ? (docs / count * 100).toFixed(1) + '%' : '0.0%';
   const spend = eqSumSpendInRange(spendMap, start, end);
   return { count, docs, pct, spend };
@@ -1985,6 +2011,7 @@ function eqBuildReportTable(dailyRows, tbodyId, fullRows, isMBBSFlag, spendMap, 
   const tillDateStats = eqSummaryStats(fullRows, monthStart, yesterday, isMBBSFlag, spendMap);
   // sumDisplayed (Today / Last 6 Days): the current-month row's Enquiries and
   // Documents are the sum of exactly the daily rows shown above it.
+  const tillDateFull = Object.assign({}, tillDateStats);
   if (sumDisplayed){
     let dc = 0, dd = 0;
     dates.forEach(ds => { dc += byDate[ds].count; dd += eqCountDocsForDate(ds, isMBBSFlag); });
@@ -2005,7 +2032,7 @@ function eqBuildReportTable(dailyRows, tbodyId, fullRows, isMBBSFlag, spendMap, 
 
   document.getElementById(tbodyId).innerHTML = bodyHtml;
 
-  return { tillDateStats, tillDateLabel, currentMonthName, pastMonths };
+  return { tillDateStats, tillDateFull, tillDateLabel, currentMonthName, pastMonths };
 }
 
 // Combines the MBBS and Study Abroad monthly stats (April onwards) plus
@@ -2015,7 +2042,7 @@ function eqBuildReportTable(dailyRows, tbodyId, fullRows, isMBBSFlag, spendMap, 
 // treated as 0 so they still count toward the total.
 // Label suffix for the Total panel's current-month row, e.g. "(Last 6 Days)".
 function eqTotalPeriodSuffix_(){
-  const m = { last6days: ' (Last 6 Days)', today: ' (Today)', currentMonth: ' (Current Month)' };
+  const m = { last6days: ' (Till Date)', today: ' (Till Date)', currentMonth: ' (Current Month)' };
   return m[eqActivePeriod] || '';
 }
 
@@ -2084,25 +2111,34 @@ function eqRenderAll(){
   })();
   let oStart = start, oEnd = end;
   if (eqSelectedDate){ oStart = eqParseYMD(eqSelectedDate); oEnd = oStart; }
-  const otherCount = otherRows.length;
-  const otherDocs = eqCountDocsInDateRange(oStart, oEnd, 'other');
+  const otherCount = otherRows.length + eqFairEnquiriesInRange(oStart, oEnd);
+  const otherDocs = eqCountDocsInDateRange(oStart, oEnd, 'other') + eqCountDocsInDateRange(oStart, oEnd, 'fair');
   const otherPct = otherCount ? (otherDocs / otherCount * 100).toFixed(1) + '%' : '0.0%';
   document.getElementById('eqReportOtherBody').innerHTML =
     `<tr><td><b>Other</b></td><td>${otherCount}</td><td>${otherDocs}</td><td>${otherPct}</td></tr>`;
 
-  // Current-month (TILL DATE) Total row = exactly what the three panels show on screen:
-  // MBBS TILL DATE + Study Abroad TILL DATE + the Other line for the selected period.
-  // Today / Last 6 Days: MBBS counts in the Total row only for what its own daily
-  // rows show; a month-to-date MBBS document is counted under Current Month only.
-  let mbbsForTotal = mbbsInfo;
-  if (eqActivePeriod === 'today' || eqActivePeriod === 'last6days'){
-    const mDates = {};
-    mbbsOtherRows.forEach(r => { mDates[r.date] = (mDates[r.date] || 0) + 1; });
-    let mc = 0, md = 0;
-    Object.keys(mDates).forEach(ds => { mc += mDates[ds]; md += eqCountDocsForDate(ds, true); });
-    mbbsForTotal = Object.assign({}, mbbsInfo, { tillDateStats: Object.assign({}, mbbsInfo.tillDateStats, { count: mc, docs: md, spend: 0 }) });
+  // Total row: Today / Last 6 Days show the full month-to-date figures of every
+  // panel ("Till Date", 1st of month to yesterday). Other periods keep using what
+  // the three panels show on screen (MBBS TILL DATE + Study Abroad row + Other line).
+  const isTodayOr6 = (eqActivePeriod === 'today' || eqActivePeriod === 'last6days');
+  const isMonthOrCustom = (eqActivePeriod === 'currentMonth' || eqActivePeriod === 'custom');
+  if (isTodayOr6 || isMonthOrCustom){
+    // MBBS and Study Abroad: month-to-date INCLUDING today (1st of the month -> today).
+    const tr = eqGetTillDateRange();
+    const mStart = tr.monthStart, mEnd = tr.today;
+    const mbbsToday = Object.assign({}, mbbsInfo, { tillDateStats: eqSummaryStats(mbbsOtherFullRows, mStart, mEnd, true, eqMbbsSpendMap) });
+    const studyToday = Object.assign({}, studyInfo, { tillDateStats: eqSummaryStats(studyAbroadFullRows, mStart, mEnd, 'fb', eqStudyAbroadSpendMap) });
+    if (isTodayOr6){
+      // Other: also month-to-date through today.
+      const otherToday = Object.assign({}, otherInfo, { tillDateStats: eqSummaryStats(otherFullRows, mStart, mEnd, 'other', {}) });
+      eqRenderTotalPanel(mbbsToday, studyToday, otherToday, null);
+    } else {
+      // Current Month / Custom Date Range: Other is what its line shows for the selected range.
+      eqRenderTotalPanel(mbbsToday, studyToday, otherInfo, { count: otherCount, docs: otherDocs, spend: 0 });
+    }
+  } else {
+    eqRenderTotalPanel(mbbsInfo, studyInfo, otherInfo, { count: otherCount, docs: otherDocs, spend: 0 });
   }
-  eqRenderTotalPanel(mbbsForTotal, studyInfo, otherInfo, { count: otherCount, docs: otherDocs, spend: 0 });
 }
 
 document.getElementById('eqPeriodBtns').addEventListener('click', (e) => {
@@ -2148,7 +2184,7 @@ async function eqHandleRefresh(){
   const btn = document.getElementById('eqRefreshBtn');
   btn.classList.add('eq-spinning');
   eqEnsureMainView();
-  const fetches = [eqLoadLiveData(), eqLoadDocsClassifiedData(), eqLoadSpendData()];
+  const fetches = [eqLoadLiveData(), eqLoadDocsClassifiedData(), eqLoadSpendData(), eqLoadFairData()];
   if (eqOldDataLoaded) fetches.push(eqLoadOldData());
   await Promise.all(fetches);
   eqRenderAll();
@@ -2166,7 +2202,7 @@ document.getElementById('eqAutoRefreshToggle').addEventListener('change', (e) =>
 
 let eqInitialized = false;
 async function eqInitDashboard(){
-  await Promise.all([eqLoadLiveData(), eqLoadDocsClassifiedData(), eqLoadSpendData()]);
+  await Promise.all([eqLoadLiveData(), eqLoadDocsClassifiedData(), eqLoadSpendData(), eqLoadFairData()]);
   eqRenderAll();
 }
 function showSection(name){
