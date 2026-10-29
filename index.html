@@ -592,6 +592,7 @@
   #mjDashboardRoot .eq-sw2-table th.eq-sw2-title{text-align:center;font-size:18px;font-weight:800;text-transform:uppercase;padding:8px;}
   #mjDashboardRoot .eq-sw2-table th.eq-sw2-col{text-align:center;font-weight:600;width:10%;}
   #mjDashboardRoot .eq-sw2-table td.eq-sw2-label{text-align:left;}
+  #mjDashboardRoot .eq-sw2-table tr.eq-sw2-total-row td{background:#eef3fa;}
   #mjDashboardRoot .eq-sw2-table td.eq-sw2-num{text-align:center;}
   #mjDashboardRoot .eq-detail-back{
     background:none; border:none; color:var(--eq-blue); font-size:13.5px; font-weight:700;
@@ -1554,9 +1555,19 @@ async function eqLoadStatusWise(){
     document.getElementById('eqSw2Head').innerHTML =
       `<tr><th class="eq-sw2-title" colspan="${cols.length + 2}">Status Wise Breakup</th></tr>` +
       `<tr><th></th>${cols.map(c => `<th class="eq-sw2-col">${eqEscapeHtml_(c)}</th>`).join('')}<th class="eq-sw2-col">Total</th></tr>`;
-    document.getElementById('eqSw2Body').innerHTML = (json.rows || []).map(r =>
-      `<tr><td class="eq-sw2-label">${eqEscapeHtml_(r.status)}</td>${(r.counts || []).map(n => `<td class="eq-sw2-num">${n}</td>`).join('')}<td class="eq-sw2-num"><b>${(r.counts || []).reduce((a, n) => a + (Number(n) || 0), 0)}</b></td></tr>`
-    ).join('');
+    // These statuses are hidden from the report (and so from the Total row too).
+    const hidden = ['2027', '2027 hot', '2028'];
+    const visibleRows = (json.rows || []).filter(r => hidden.indexOf(String(r.status || '').trim().replace(/\s+/g, ' ').toLowerCase()) === -1);
+    const colTotals = cols.map(() => 0);
+    const rowHtml = visibleRows.map(r => {
+      const counts = r.counts || [];
+      counts.forEach((n, k) => { colTotals[k] = (colTotals[k] || 0) + (Number(n) || 0); });
+      const rowSum = counts.reduce((a, n) => a + (Number(n) || 0), 0);
+      return `<tr><td class="eq-sw2-label">${eqEscapeHtml_(r.status)}</td>${counts.map(n => `<td class="eq-sw2-num">${n}</td>`).join('')}<td class="eq-sw2-num"><b>${rowSum}</b></td></tr>`;
+    }).join('');
+    const grand = colTotals.reduce((a, n) => a + n, 0);
+    document.getElementById('eqSw2Body').innerHTML = rowHtml +
+      `<tr class="eq-sw2-total-row"><td class="eq-sw2-label"><b>Total</b></td>${colTotals.map(n => `<td class="eq-sw2-num"><b>${n}</b></td>`).join('')}<td class="eq-sw2-num"><b>${grand}</b></td></tr>`;
     statusEl.textContent = (start || end) ? `Filtered: ${start || '...'} to ${end || '...'}` : 'All dates';
   } catch (err) {
     if (myId === eqSw2RequestId) statusEl.textContent = 'Could not load Status Wise Breakup';
