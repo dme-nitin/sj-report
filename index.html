@@ -586,6 +586,13 @@
   }
 
   #mjDashboardRoot .eq-detail-view{display:none;}
+  #mjDashboardRoot .eq-sw2-filter{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 12px 0;}
+  #mjDashboardRoot .eq-sw2-table{border-collapse:collapse;width:100%;background:#fff;color:#000;font-size:13px;}
+  #mjDashboardRoot .eq-sw2-table th, #mjDashboardRoot .eq-sw2-table td{border:1px solid #000;padding:5px 8px;}
+  #mjDashboardRoot .eq-sw2-table th.eq-sw2-title{text-align:center;font-size:18px;font-weight:800;text-transform:uppercase;padding:8px;}
+  #mjDashboardRoot .eq-sw2-table th.eq-sw2-col{text-align:center;font-weight:600;width:10%;}
+  #mjDashboardRoot .eq-sw2-table td.eq-sw2-label{text-align:left;}
+  #mjDashboardRoot .eq-sw2-table td.eq-sw2-num{text-align:center;}
   #mjDashboardRoot .eq-detail-back{
     background:none; border:none; color:var(--eq-blue); font-size:13.5px; font-weight:700;
     cursor:pointer; padding:8px 0; margin-bottom:10px; font-family:inherit;
@@ -743,6 +750,7 @@
           <button class="eq-period-btn" data-period="custom">Custom Date Range</button>
         </div>
         <button class="eq-period-btn" id="eqSourceWiseBtn" onclick="eqOpenSourceWise()">Source Wise Detailed</button>
+        <button class="eq-period-btn" id="eqStatusWiseBtn" onclick="eqOpenStatusWise()">Status Wise Breakup</button>
         <button class="eq-period-btn" id="eqOldDataBtn" onclick="eqOpenOldData()">Old Data</button>
         <button class="eq-period-btn" id="eqAmitReportBtn" onclick="eqOpenAmitReport()">Amit Report</button>
         <div class="eq-custom-range" id="eqCustomRange">
@@ -907,6 +915,23 @@
               </table>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div id="eqStatusWiseView" class="eq-detail-view">
+        <button class="eq-detail-back" onclick="eqCloseStatusWise()">&larr; Back to Dashboard</button>
+        <div class="eq-sw2-filter">
+          <label>From <input type="date" id="eqSw2Start"></label>
+          <label>To <input type="date" id="eqSw2End"></label>
+          <button class="eq-primary-btn" onclick="eqLoadStatusWise()">Apply</button>
+          <button class="eq-primary-btn" onclick="eqClearStatusWiseDates()">All dates</button>
+          <span id="eqSw2Status" class="eq-sub"></span>
+        </div>
+        <div class="eq-table-scroll">
+          <table class="eq-sw2-table">
+            <thead id="eqSw2Head"></thead>
+            <tbody id="eqSw2Body"></tbody>
+          </table>
         </div>
       </div>
 
@@ -1469,6 +1494,7 @@ function eqEscapeHtml_(val){
 // filters, search, clear) so that using a filter while Source Wise is
 // open automatically brings the main report back into view.
 function eqEnsureMainView(){
+  document.getElementById('eqStatusWiseView').style.display = 'none';
   document.getElementById('eqSourceWiseView').style.display = 'none';
   document.getElementById('eqOldDataView').style.display = 'none';
   document.getElementById('eqAmitReportView').style.display = 'none';
@@ -1476,6 +1502,7 @@ function eqEnsureMainView(){
 }
 
 function eqOpenSourceWise(){
+  document.getElementById('eqStatusWiseView').style.display = 'none';
   document.getElementById('eqMainContent').style.display = 'none';
   document.getElementById('eqOldDataView').style.display = 'none';
   document.getElementById('eqAmitReportView').style.display = 'none';
@@ -1484,7 +1511,60 @@ function eqOpenSourceWise(){
   eqLoadSourceWise();
 }
 
+// ---------------- STATUS WISE BREAKUP ----------------
+let eqSw2RequestId = 0;
+
+function eqOpenStatusWise(){
+  document.getElementById('eqMainContent').style.display = 'none';
+  document.getElementById('eqSourceWiseView').style.display = 'none';
+  document.getElementById('eqOldDataView').style.display = 'none';
+  document.getElementById('eqAmitReportView').style.display = 'none';
+  document.getElementById('eqStatusWiseView').style.display = 'block';
+  eqLoadStatusWise();
+}
+
+function eqCloseStatusWise(){
+  document.getElementById('eqStatusWiseView').style.display = 'none';
+  document.getElementById('eqMainContent').style.display = 'block';
+}
+
+function eqClearStatusWiseDates(){
+  document.getElementById('eqSw2Start').value = '';
+  document.getElementById('eqSw2End').value = '';
+  eqLoadStatusWise();
+}
+
+async function eqLoadStatusWise(){
+  const statusEl = document.getElementById('eqSw2Status');
+  if (SCRIPT_URL.includes('PASTE_YOUR')) { statusEl.textContent = 'Sheet not connected yet'; return; }
+  const myId = ++eqSw2RequestId;
+  const start = document.getElementById('eqSw2Start').value;
+  const end = document.getElementById('eqSw2End').value;
+  statusEl.textContent = 'Loading...';
+  try {
+    let url = SCRIPT_URL + '?action=statusWise&_=' + Date.now();
+    if (start) url += '&start=' + encodeURIComponent(start);
+    if (end) url += '&end=' + encodeURIComponent(end);
+    const res = await eqFetchWithRetry(url);
+    const json = await res.json();
+    if (myId !== eqSw2RequestId) return;
+    if (json.status !== 'ok') throw new Error(json.message || 'bad response');
+
+    const cols = json.counsellors || [];
+    document.getElementById('eqSw2Head').innerHTML =
+      `<tr><th class="eq-sw2-title" colspan="${cols.length + 2}">Status Wise Breakup</th></tr>` +
+      `<tr><th></th>${cols.map(c => `<th class="eq-sw2-col">${eqEscapeHtml_(c)}</th>`).join('')}<th class="eq-sw2-col">Total</th></tr>`;
+    document.getElementById('eqSw2Body').innerHTML = (json.rows || []).map(r =>
+      `<tr><td class="eq-sw2-label">${eqEscapeHtml_(r.status)}</td>${(r.counts || []).map(n => `<td class="eq-sw2-num">${n}</td>`).join('')}<td class="eq-sw2-num"><b>${(r.counts || []).reduce((a, n) => a + (Number(n) || 0), 0)}</b></td></tr>`
+    ).join('');
+    statusEl.textContent = (start || end) ? `Filtered: ${start || '...'} to ${end || '...'}` : 'All dates';
+  } catch (err) {
+    if (myId === eqSw2RequestId) statusEl.textContent = 'Could not load Status Wise Breakup';
+  }
+}
+
 function eqOpenOldData(){
+  document.getElementById('eqStatusWiseView').style.display = 'none';
   document.getElementById('eqMainContent').style.display = 'none';
   document.getElementById('eqSourceWiseView').style.display = 'none';
   document.getElementById('eqAmitReportView').style.display = 'none';
@@ -1568,6 +1648,7 @@ async function eqLoadAmitReport(){
 }
 
 function eqOpenAmitReport(){
+  document.getElementById('eqStatusWiseView').style.display = 'none';
   document.getElementById('eqMainContent').style.display = 'none';
   document.getElementById('eqSourceWiseView').style.display = 'none';
   document.getElementById('eqOldDataView').style.display = 'none';
@@ -2212,7 +2293,7 @@ function showSection(name){
 
   if (name === 'dashboard'){
     document.getElementById('dashboardSection').classList.add('active');
-    if (eqInitialized) { eqCloseSourceWise(); eqCloseOldData(); eqCloseAmitReport(); }
+    if (eqInitialized) { eqCloseSourceWise(); eqCloseOldData(); eqCloseAmitReport(); eqCloseStatusWise(); }
   } else if (name === 'mj'){
     document.getElementById('mjSection').classList.add('active');
     if (!eqInitialized){ eqInitialized = true; eqInitDashboard(); }
