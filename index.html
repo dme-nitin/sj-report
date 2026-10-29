@@ -1553,7 +1553,7 @@ async function eqLoadStatusWise(){
 
     const cols = json.counsellors || [];
     document.getElementById('eqSw2Head').innerHTML =
-      `<tr><th class="eq-sw2-title" colspan="${cols.length + 2}">Status Wise Breakup</th></tr>` +
+      `<tr><th class="eq-sw2-title" colspan="${cols.length + 2}">DR Status Wise Breakup</th></tr>` +
       `<tr><th></th>${cols.map(c => `<th class="eq-sw2-col">${eqEscapeHtml_(c)}</th>`).join('')}<th class="eq-sw2-col">Total</th></tr>`;
     // These statuses are hidden from the report (and so from the Total row too).
     const hidden = ['2027', '2027 hot', '2028'];
