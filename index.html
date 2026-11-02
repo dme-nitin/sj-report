@@ -666,6 +666,8 @@
     #eqPrintArea table{ width:100%; border-collapse:collapse; }
     #eqPrintArea th, #eqPrintArea td{ border:1px solid #000; padding:5px 6px; font-size:9.5px; text-align:center; }
     #eqPrintArea input{ border:none; width:100%; text-align:center; font-size:9.5px; font-family:inherit; }
+    #eqPrintArea th.eq-sw2-title{ font-size:15px; font-weight:800; text-transform:uppercase; }
+    #eqPrintArea td.eq-sw2-label{ text-align:left; }
     #eqPrintArea .eq-print-section-gap{ height:20px; page-break-inside:avoid; }
     #eqPrintArea table{ page-break-inside:avoid; }
   }
@@ -927,6 +929,13 @@
           <button class="eq-primary-btn" onclick="eqLoadStatusWise()">Apply</button>
           <button class="eq-primary-btn" onclick="eqClearStatusWiseDates()">All dates</button>
           <span id="eqSw2Status" class="eq-sub"></span>
+          <button class="eq-print-icon-btn" style="position:static;transform:none;margin-left:auto;flex:0 0 32px;" onclick="eqPrintStatusWise()" title="Print report" aria-label="Print report">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 6 2 18 2 18 9"></polyline>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+              <rect x="6" y="14" width="12" height="8"></rect>
+            </svg>
+          </button>
         </div>
         <div class="eq-table-scroll">
           <table class="eq-sw2-table">
@@ -1694,6 +1703,17 @@ function eqCloneTableForPrint_(tbodyId){
     input.setAttribute('value', input.value);
   });
   return clone;
+}
+
+// Prints ONLY the DR Status Wise Breakup table (title row, header, all rows, Total row).
+function eqPrintStatusWise(){
+  const printArea = document.getElementById('eqPrintArea');
+  printArea.innerHTML = '';
+  const table = document.querySelector('#eqStatusWiseView .eq-sw2-table');
+  if (!table) return;
+  printArea.appendChild(table.cloneNode(true));
+  document.body.classList.add('eq-printing-mode');
+  window.print();
 }
 
 function eqPrintAmitReport(){
